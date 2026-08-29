@@ -1,0 +1,4530 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>衣渐佳 - AI 造型师原型</title>
+  <style>
+    :root {
+      --paper: #f7f3ec;
+      --surface: #fffdf8;
+      --surface-soft: #f0ebe2;
+      --ink: #24221e;
+      --muted: #766f65;
+      --muted-2: #9b9387;
+      --line: #e4ddd2;
+      --accent: #2f4a3d;
+      --accent-soft: #e3ebe4;
+      --wine: #7a3b3f;
+      --gold: #b89b62;
+      --shadow: 0 16px 40px rgba(36, 34, 30, 0.08);
+      --radius: 8px;
+      --nav-height: 72px;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background:
+        linear-gradient(135deg, rgba(47, 74, 61, 0.10), transparent 34%),
+        linear-gradient(315deg, rgba(122, 59, 63, 0.08), transparent 28%),
+        var(--paper);
+      color: var(--ink);
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      padding: 18px 0;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: none;
+      color: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .phone {
+      position: relative;
+      width: min(100vw, 430px);
+      height: min(920px, calc(100vh - 36px));
+      min-height: 760px;
+      background: var(--paper);
+      border: 1px solid rgba(36, 34, 30, 0.08);
+      border-radius: 30px;
+      box-shadow: 0 26px 70px rgba(28, 27, 24, 0.16);
+      overflow: hidden;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      background: var(--paper);
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .topbar {
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 58px;
+      padding: 12px 18px 10px;
+      background: rgba(247, 243, 236, 0.92);
+      border-bottom: 1px solid rgba(228, 221, 210, 0.66);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand strong,
+    .page-title {
+      font-size: 20px;
+      font-weight: 650;
+      line-height: 1.1;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .back {
+      width: 40px;
+      height: 40px;
+      margin-left: -8px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--accent);
+      font-size: 22px;
+    }
+
+    .top-action {
+      min-width: 44px;
+      color: var(--accent);
+      font-size: 14px;
+      text-align: right;
+    }
+
+    .top-spacer {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .content {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 18px calc(var(--nav-height) + 18px);
+      scrollbar-width: none;
+    }
+
+    .content::-webkit-scrollbar {
+      display: none;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-copy h1 {
+      max-width: 270px;
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.14;
+      font-weight: 680;
+      letter-spacing: 0;
+    }
+
+    .hero-copy p {
+      margin: 10px 0 18px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .mirror {
+      position: relative;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      overflow: hidden;
+      padding: 16px;
+      color: #fffaf0;
+      background:
+        linear-gradient(180deg, rgba(16, 16, 14, 0.08), rgba(16, 16, 14, 0.64)),
+        url("https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80") center 34% / cover;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .mirror::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border: 1px solid rgba(255, 250, 240, 0.42);
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    .mirror-action {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 14px 14px 16px;
+      background: rgba(19, 18, 15, 0.48);
+      border: 1px solid rgba(255, 250, 240, 0.22);
+      border-radius: var(--radius);
+      backdrop-filter: blur(12px);
+    }
+
+    .mirror-action strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 620;
+    }
+
+    .mirror-action span {
+      color: rgba(255, 250, 240, 0.78);
+      font-size: 12px;
+    }
+
+    .round-mark {
+      flex: 0 0 42px;
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 250, 240, 0.62);
+      border-radius: 50%;
+      font-size: 19px;
+    }
+
+    .home-content {
+      padding-top: 12px;
+    }
+
+    .home-topbar {
+      align-items: flex-start;
+      min-height: 82px;
+      padding-top: 20px;
+      border-bottom: 0;
+      background: rgba(247, 243, 236, 0.72);
+    }
+
+    .brand-kicker {
+      margin: 0 0 5px;
+      color: #a27763;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .brand-line {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+    }
+
+    .brand-line strong {
+      font-size: 24px;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .brand-line span {
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 400;
+    }
+
+    .home-subtitle {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .bell-btn {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      background: var(--surface);
+      border: 1px solid rgba(228, 221, 210, 0.9);
+      border-radius: 50%;
+      box-shadow: 0 8px 22px rgba(36, 34, 30, 0.06);
+    }
+
+    .ui-icon {
+      width: 20px;
+      height: 20px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .demo-hero {
+      position: relative;
+      min-height: 212px;
+      overflow: hidden;
+      padding: 20px;
+      color: #fffdf8;
+      background:
+        linear-gradient(135deg, rgba(159, 123, 100, 0.74), rgba(247, 241, 233, 0.62) 52%, rgba(47, 74, 61, 0.48)),
+        var(--surface-soft);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .demo-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 78% 18%, rgba(255, 253, 248, 0.42), transparent 28%),
+        linear-gradient(180deg, rgba(38, 35, 30, 0.04), rgba(38, 35, 30, 0.18));
+      pointer-events: none;
+    }
+
+    .demo-copy {
+      position: relative;
+      z-index: 2;
+      max-width: 210px;
+    }
+
+    .demo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 27px;
+      padding: 6px 10px;
+      background: rgba(36, 34, 30, 0.28);
+      border: 1px solid rgba(255, 253, 248, 0.18);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .demo-badge .ui-icon {
+      width: 13px;
+      height: 13px;
+      stroke-width: 2;
+    }
+
+    .demo-heading {
+      display: block;
+      margin: 14px 0 0;
+      font-size: 22px;
+      line-height: 1.25;
+      font-weight: 690;
+    }
+
+    .demo-piece,
+    .demo-look {
+      position: absolute;
+      z-index: 1;
+      overflow: hidden;
+      background: rgba(255, 253, 248, 0.72);
+      box-shadow: 0 18px 38px rgba(36, 34, 30, 0.18);
+    }
+
+    .demo-piece {
+      left: 20px;
+      bottom: 16px;
+      width: 96px;
+      height: 112px;
+      border: 5px solid rgba(255, 253, 248, 0.68);
+      border-radius: 16px;
+    }
+
+    .demo-look {
+      right: 14px;
+      bottom: 0;
+      width: 128px;
+      height: 176px;
+      border-radius: 30px 30px 0 0;
+    }
+
+    .demo-piece img,
+    .demo-look img,
+    .home-card-art img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .demo-piece img {
+      opacity: 0.58;
+    }
+
+    .demo-look img {
+      opacity: 0.72;
+    }
+
+    .demo-label {
+      position: absolute;
+      left: 10px;
+      bottom: 8px;
+      z-index: 2;
+      color: #fffdf8;
+      font-size: 10px;
+      font-weight: 650;
+    }
+
+    .demo-arrow {
+      position: absolute;
+      z-index: 3;
+      left: 42%;
+      bottom: 70px;
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: #a27763;
+      border-radius: 50%;
+      box-shadow: 0 12px 24px rgba(98, 62, 47, 0.22);
+    }
+
+    .demo-arrow .ui-icon {
+      width: 22px;
+      height: 22px;
+      stroke-width: 2.1;
+    }
+
+    .home-task-rail {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 2px 18px 6px 0;
+      margin-right: -18px;
+      scrollbar-width: none;
+    }
+
+    .home-task-rail::-webkit-scrollbar {
+      display: none;
+    }
+
+    .home-task-card {
+      position: relative;
+      flex: 0 0 184px;
+      min-height: 142px;
+      overflow: hidden;
+      padding: 15px;
+      background: var(--surface);
+      border: 1px solid rgba(228, 221, 210, 0.78);
+      border-radius: 20px;
+      scroll-snap-align: start;
+      box-shadow: 0 10px 24px rgba(36, 34, 30, 0.045);
+      text-align: left;
+    }
+
+    .home-task-card.featured {
+      flex-basis: 246px;
+      background: #eee5dc;
+    }
+
+    .home-task-card.green {
+      background: #e5ece8;
+    }
+
+    .home-task-card.diagnosis-featured {
+      flex-basis: 238px;
+      background:
+        linear-gradient(135deg, rgba(229, 236, 232, 0.96), rgba(247, 241, 233, 0.94)),
+        #e5ece8;
+    }
+
+    .home-task-card.warm {
+      background: #f1e9dd;
+    }
+
+    .home-task-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      background: rgba(255, 253, 248, 0.78);
+      border: 1px solid rgba(255, 253, 248, 0.72);
+      border-radius: 13px;
+      box-shadow: 0 8px 18px rgba(36, 34, 30, 0.045);
+    }
+
+    .home-task-card.green .home-task-icon {
+      color: #3c5a4d;
+    }
+
+    .home-task-card.warm .home-task-icon {
+      color: #8d5946;
+    }
+
+    .home-task-icon .ui-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .home-task-title {
+      display: block;
+      position: relative;
+      z-index: 2;
+      margin: 11px 0 5px;
+      font-size: 17px;
+      font-weight: 680;
+    }
+
+    .home-task-desc {
+      display: block;
+      position: relative;
+      z-index: 2;
+      max-width: 132px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .home-task-card.featured .home-task-desc {
+      max-width: 150px;
+    }
+
+    .home-task-card.diagnosis-featured .home-task-desc {
+      max-width: 122px;
+    }
+
+    .home-card-art {
+      position: absolute;
+      right: -10px;
+      bottom: -14px;
+      width: 92px;
+      height: 118px;
+      overflow: hidden;
+      background: #34404b;
+      border-radius: 22px 22px 0 0;
+    }
+
+    .home-card-art img {
+      opacity: 0.45;
+    }
+
+    .home-diagnosis-art {
+      position: absolute;
+      right: -8px;
+      bottom: -8px;
+      width: 126px;
+      height: 104px;
+      overflow: hidden;
+      background: #d8ded8;
+      border-radius: 24px 0 0 0;
+      box-shadow: -10px -10px 24px rgba(36, 34, 30, 0.06);
+    }
+
+    .diag-shot {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 62%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .diag-shot.before {
+      left: 0;
+      background-image:
+        linear-gradient(180deg, rgba(20, 19, 16, 0.02), rgba(20, 19, 16, 0.30)),
+        url("https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=420&q=80");
+    }
+
+    .diag-shot.after {
+      right: 0;
+      clip-path: polygon(36% 0, 100% 0, 100% 100%, 36% 100%);
+      background-image:
+        linear-gradient(180deg, rgba(20, 19, 16, 0.02), rgba(20, 19, 16, 0.30)),
+        url("https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=420&q=80");
+    }
+
+    .diag-divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 2px;
+      background: rgba(255, 253, 248, 0.92);
+      box-shadow: 0 0 14px rgba(36, 34, 30, 0.22);
+      transform: rotate(6deg);
+    }
+
+    .diag-label {
+      position: absolute;
+      left: 10px;
+      bottom: 9px;
+      color: #fffdf8;
+      font-size: 10px;
+      font-weight: 700;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.34);
+    }
+
+    .primary-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      color: #8d5946;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .secondary-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 2;
+      color: #3c5a4d;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .prompt-area {
+      padding-top: 2px;
+    }
+
+    .prompt-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .prompt-chip {
+      min-height: 36px;
+      padding: 9px 12px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      box-shadow: 0 8px 20px rgba(36, 34, 30, 0.035);
+    }
+
+    .tip-card {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 13px;
+      color: var(--muted);
+      background: #faf6f1;
+      border: 1px solid #eadfd7;
+      border-radius: 16px;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .tip-mark {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      color: #a27763;
+      background: #f0e4db;
+      border-radius: 50%;
+    }
+
+    .tip-mark .ui-icon {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2.1;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 22px 0 10px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 640;
+    }
+
+    .section-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .task-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .task-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 40px 1fr 24px;
+      align-items: center;
+      gap: 12px;
+      min-height: 86px;
+      padding: 15px 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 24px rgba(36, 34, 30, 0.045);
+      text-align: left;
+    }
+
+    .task-card::after {
+      content: "";
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+
+    .task-card:active::after,
+    .task-card.selected::after {
+      opacity: 1;
+    }
+
+    .task-index {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .task-card strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 640;
+    }
+
+    .task-card span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .chevron {
+      color: var(--muted-2);
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .upload-content {
+      padding-top: 18px;
+    }
+
+    .upload-intro {
+      margin: 0 auto 22px;
+      max-width: 300px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    .upload-dropzone {
+      position: relative;
+      width: 100%;
+      min-height: 330px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 28px;
+      background:
+        radial-gradient(circle at 28% 18%, rgba(255, 253, 248, 0.86), transparent 26%),
+        radial-gradient(circle at 78% 70%, rgba(162, 119, 99, 0.15), transparent 28%),
+        #f2e9e1;
+      border: 1.5px dashed #d7c5b9;
+      border-radius: 26px;
+      text-align: center;
+    }
+
+    .upload-camera-mark {
+      width: 76px;
+      height: 76px;
+      display: grid;
+      place-items: center;
+      color: #9a604c;
+      background: rgba(255, 253, 248, 0.92);
+      border: 1px solid rgba(228, 221, 210, 0.86);
+      border-radius: 24px;
+      box-shadow: 0 14px 26px rgba(36, 34, 30, 0.08);
+    }
+
+    .upload-dropzone h2 {
+      position: relative;
+      margin: 18px 0 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .upload-dropzone p {
+      position: relative;
+      max-width: 235px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .upload-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .upload-action {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .upload-action.primary-action {
+      color: #fff;
+      background: #9a604c;
+      border-color: #9a604c;
+    }
+
+    .upload-or {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0 14px;
+      color: var(--muted-2);
+      font-size: 12px;
+    }
+
+    .upload-or::before,
+    .upload-or::after {
+      content: "";
+      height: 1px;
+      background: var(--line);
+    }
+
+    .upload-prompt-label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .upload-submit {
+      margin-top: 12px;
+    }
+
+    .say-box {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .say-box input,
+    .soft-input,
+    .soft-textarea {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .say-box input::placeholder,
+    .soft-textarea::placeholder {
+      color: var(--muted-2);
+    }
+
+    .send {
+      flex: 0 0 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      border-radius: 50%;
+      color: #fff;
+      font-size: 18px;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      z-index: 8;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--nav-height);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 8px 18px 12px;
+      background: rgba(255, 253, 248, 0.94);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    .nav-item {
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .nav-icon {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      color: currentColor;
+      font-size: 17px;
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .segments {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      padding: 4px;
+      margin-bottom: 14px;
+      background: rgba(255, 253, 248, 0.78);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .segment {
+      height: 36px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      border-radius: 6px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .segment.active {
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 6px 16px rgba(47, 74, 61, 0.18);
+    }
+
+    .upload-preview {
+      display: grid;
+      grid-template-columns: 128px 1fr;
+      gap: 14px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+
+    .item-photo {
+      min-height: 180px;
+      background:
+        linear-gradient(180deg, rgba(255, 253, 248, 0), rgba(34, 32, 28, 0.30)),
+        url("https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=700&q=80") center / cover;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .analysis-box {
+      padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .analysis-box p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .result-name {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    .label {
+      display: block;
+      margin: 17px 0 9px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 12px;
+      color: var(--muted);
+      background: rgba(255, 253, 248, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .chip.active {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .soft-textarea {
+      min-height: 82px;
+      resize: none;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      line-height: 1.55;
+    }
+
+    .primary {
+      width: 100%;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      margin-top: 18px;
+      color: #fff;
+      background: var(--accent);
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 620;
+      box-shadow: 0 14px 24px rgba(47, 74, 61, 0.18);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+    }
+
+    .secondary {
+      height: 42px;
+      padding: 0 14px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 560;
+    }
+
+    .lock-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .lock-card strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .lock-card span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .result-content {
+      padding-top: 10px;
+    }
+
+    .result-lock {
+      min-height: 38px;
+      padding: 9px 14px;
+      margin-bottom: 14px;
+      color: #744839;
+      background: #efe3da;
+      border: 0;
+      border-radius: 999px;
+      box-shadow: none;
+    }
+
+    .result-lock strong {
+      display: inline;
+      font-size: 13px;
+    }
+
+    .result-lock span {
+      color: #744839;
+      font-size: 13px;
+    }
+
+    .result-lock .secondary {
+      display: none;
+    }
+
+    .progress-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .carousel {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 2px 18px 12px;
+      margin: 0 -18px;
+      scrollbar-width: none;
+    }
+
+    .carousel::-webkit-scrollbar {
+      display: none;
+    }
+
+    .outfit-card {
+      flex: 0 0 calc(100% - 48px);
+      max-width: 340px;
+      overflow: hidden;
+      scroll-snap-align: center;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .fixed-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .thumb {
+      width: 40px;
+      height: 48px;
+      flex: 0 0 auto;
+      background: url("https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=240&q=80") center / cover;
+      border-radius: 6px;
+    }
+
+    .fixed-strip strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .fixed-strip span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .look-image {
+      position: relative;
+      aspect-ratio: 5 / 4;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .look-image.item-anchor {
+      background-color: #efe8dc;
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+
+    .look-image.item-anchor::before {
+      content: "搭配方案参考，暂未生成真人试穿图";
+      position: absolute;
+      z-index: 2;
+      right: 12px;
+      bottom: 12px;
+      max-width: 170px;
+      padding: 8px 10px;
+      color: var(--accent);
+      background: rgba(255, 253, 248, 0.94);
+      border-radius: var(--radius);
+      font-size: 12px;
+      line-height: 1.35;
+      box-shadow: 0 8px 18px rgba(36, 34, 30, 0.08);
+    }
+
+    .look-image.generating::before {
+      content: "图片生成中...";
+    }
+
+    .look-image.generating .image-spinner {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      width: 34px;
+      height: 34px;
+      margin: -17px 0 0 -17px;
+      border: 3px solid rgba(255, 253, 248, 0.72);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 900ms linear infinite;
+    }
+
+    .look-image.image-failed::before {
+      content: "图片生成失败，先看文字方案";
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .look-image::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(22, 21, 18, 0.02) 48%, rgba(22, 21, 18, 0.52));
+      pointer-events: none;
+    }
+
+    .look-badge {
+      position: absolute;
+      z-index: 2;
+      top: 12px;
+      left: 12px;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 12px;
+      color: var(--ink);
+      background: rgba(255, 253, 248, 0.94);
+      border-radius: 999px;
+      box-shadow: 0 8px 18px rgba(36, 34, 30, 0.08);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .look-caption {
+      position: absolute;
+      z-index: 2;
+      left: 14px;
+      bottom: 14px;
+      color: #fffdf8;
+      font-size: 22px;
+      font-weight: 760;
+      line-height: 1;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+    }
+
+    .look-one {
+      background-image:
+        linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.28)),
+        url("https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80");
+    }
+
+    .look-two {
+      background-image:
+        linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.24)),
+        url("https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80");
+    }
+
+    .look-three {
+      background-image:
+        linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.26)),
+        url("https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80");
+    }
+
+    .card-body {
+      padding: 14px 15px 13px;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .card-title h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 670;
+      line-height: 1.25;
+    }
+
+    .tagline {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      color: var(--wine);
+      background: #f5ece6;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .style-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 8px 0 12px;
+    }
+
+    .style-tag {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      color: var(--muted);
+      background: var(--surface-soft);
+      border-radius: 999px;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .list-row {
+      display: grid;
+      grid-template-columns: 46px 1fr;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .list-row b {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .reason {
+      margin: 10px 0 0;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 0 15px 15px;
+    }
+
+    .action {
+      min-height: 38px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+
+    .action.accept {
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .action.is-favorited {
+      color: #fff;
+      background: var(--wine);
+    }
+
+    .action.is-accepted {
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .question-panel {
+      padding: 10px 0 0;
+      margin-top: 4px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .question-panel h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .question-panel .say-box {
+      margin-top: 14px;
+      background: #f3eee8;
+      border-color: transparent;
+    }
+
+    .diagnosis-content {
+      padding-top: 14px;
+      padding-bottom: calc(var(--nav-height) + 86px);
+    }
+
+    .diagnosis-photo {
+      position: relative;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 10px;
+      margin-bottom: 14px;
+      background: #eee8df;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .diagnosis-photo-img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: min(430px, 56vh);
+      object-fit: contain;
+      background: #e5ded4;
+      border-radius: 14px;
+    }
+
+    .photo-link {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 11px;
+      color: #fffdf8;
+      background: rgba(22, 21, 18, 0.44);
+      border: 1px solid rgba(255, 253, 248, 0.22);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .diagnosis-panel,
+    .recommend-panel,
+    .light-options {
+      padding: 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 10px 24px rgba(36, 34, 30, 0.045);
+    }
+
+    .diagnosis-panel h2,
+    .recommend-panel h2,
+    .light-options h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .diagnosis-panel p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .diagnosis-headline {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .diagnosis-headline h2 {
+      margin: 0;
+    }
+
+    .original-preview-btn {
+      flex: 0 0 auto;
+      min-height: 34px;
+      padding: 7px 11px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .diagnosis-grid {
+      display: grid;
+      gap: 9px;
+      margin: 14px 0;
+    }
+
+    .diagnosis-row {
+      display: grid;
+      grid-template-columns: 20px 58px 1fr;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .diag-good {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .diag-warn {
+      color: #a27763;
+      font-weight: 800;
+    }
+
+    .diagnosis-row b {
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .core-problem {
+      margin-top: 14px;
+      padding: 14px;
+      background: #f7f1eb;
+      border: 1px solid #eadfd7;
+      border-radius: 12px;
+    }
+
+    .core-problem span {
+      display: block;
+      margin-bottom: 8px;
+      color: #8d5946;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .core-problem p {
+      margin: 0;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.55;
+      font-weight: 600;
+    }
+
+    .down-cta {
+      width: 100%;
+      min-height: 46px;
+      display: grid;
+      place-items: center;
+      margin-top: 14px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .recommend-panel {
+      margin-top: 14px;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .recommend-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 16px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .recommend-head h2 {
+      margin: 0 0 4px;
+    }
+
+    .recommend-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .recommend-badge {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      color: #fffdf8;
+      background: var(--accent);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .before-after {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      overflow: visible;
+      padding: 10px;
+      background: #f3eee8;
+      touch-action: auto;
+    }
+
+    .ba-image {
+      position: relative;
+      min-height: 260px;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      background-color: #ddd5ca;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border-radius: 14px;
+    }
+
+    .ba-before {
+      background-image:
+        linear-gradient(180deg, rgba(20, 19, 16, 0.02), rgba(20, 19, 16, 0.28)),
+        url("https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80");
+    }
+
+    .ba-after {
+      background-image:
+        linear-gradient(180deg, rgba(20, 19, 16, 0.02), rgba(20, 19, 16, 0.30)),
+        url("https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80");
+    }
+
+    .ba-label {
+      position: absolute;
+      z-index: 3;
+      top: 12px;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      color: #fffdf8;
+      background: rgba(22, 21, 18, 0.48);
+      border: 1px solid rgba(255, 253, 248, 0.18);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+    }
+
+    .ba-label.before {
+      left: 22px;
+    }
+
+    .ba-label.after {
+      right: 22px;
+    }
+
+    .ba-divider {
+      display: none;
+    }
+
+    .ba-handle {
+      display: none;
+    }
+
+    .ba-range {
+      display: none;
+    }
+
+    .ba-hint {
+      display: none;
+    }
+
+    .change-list {
+      padding: 15px 16px 16px;
+    }
+
+    .change-list h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .change-block {
+      padding: 13px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .change-block:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .change-block h4 {
+      margin: 0 0 9px;
+      font-size: 15px;
+    }
+
+    .swap-line {
+      display: grid;
+      grid-template-columns: 1fr 24px 1fr;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 9px;
+    }
+
+    .swap-pill {
+      min-height: 38px;
+      display: grid;
+      place-items: center;
+      padding: 8px 10px;
+      background: var(--surface-soft);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .swap-arrow {
+      color: #a27763;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .change-block p {
+      margin: 8px 0 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .micro-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .micro-action {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 11px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .diagnosis-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 0 16px 16px;
+    }
+
+    .diagnosis-actions .primary {
+      grid-column: 1 / -1;
+      margin: 0;
+    }
+
+    .light-options {
+      margin-top: 14px;
+    }
+
+    .option-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .option-card {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 318px;
+      background: #fbf8f3;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      text-align: left;
+    }
+
+    .option-image {
+      position: relative;
+      display: block;
+      height: 132px;
+      background-color: #eee8df;
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .option-index {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: #8d5946;
+      background: rgba(255, 253, 248, 0.9);
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 8px 16px rgba(36, 34, 30, 0.08);
+    }
+
+    .option-body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 8px;
+      padding: 11px;
+    }
+
+    .option-card strong {
+      display: block;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .option-card span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .option-summary {
+      display: block;
+    }
+
+    .option-detail {
+      display: block;
+    }
+
+    .option-detail b {
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .option-card-cta {
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+      margin-top: auto;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      font-weight: 650;
+    }
+
+    .ai-chat-dock {
+      position: sticky;
+      bottom: -30px;
+      z-index: 5;
+      margin: 22px -2px 0;
+      padding: 8px 0 12px;
+      background: linear-gradient(180deg, rgba(247, 243, 236, 0), var(--paper) 32%);
+    }
+
+    .ai-chat-dock .say-box {
+      min-height: 50px;
+      background: #f3eee8;
+      border-color: transparent;
+      box-shadow: 0 10px 24px rgba(36, 34, 30, 0.08);
+    }
+
+    .review-upload {
+      min-height: 172px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 16px;
+      color: var(--accent);
+      background:
+        linear-gradient(135deg, rgba(47, 74, 61, 0.10), transparent),
+        var(--surface);
+      border: 1px dashed rgba(47, 74, 61, 0.38);
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 620;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .compare-photo {
+      position: relative;
+      min-height: 184px;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-color: #eee8df;
+      box-shadow: var(--shadow);
+    }
+
+    .compare-photo::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      padding: 5px 9px;
+      color: #fff;
+      background: rgba(36, 34, 30, 0.48);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .compare-photo:first-child {
+      background-image: url("https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=520&q=80");
+    }
+
+    .compare-photo:last-child {
+      background-image: url("https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=520&q=80");
+    }
+
+    .report {
+      padding: 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .report h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .report p {
+      margin: 10px 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .score-list {
+      display: grid;
+      gap: 9px;
+      margin: 12px 0 0;
+    }
+
+    .score-list div {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .score-list b {
+      color: var(--accent);
+      font-weight: 650;
+    }
+
+    .review-list {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .review-list li {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .review-next {
+      margin-top: 12px;
+      padding: 12px;
+      color: #7a3b3f;
+      background: #f5ebe7;
+      border-radius: var(--radius);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .satisfaction {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .review-actions {
+      padding: 12px 0 0;
+    }
+
+    .record-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .record-card {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      text-align: left;
+    }
+
+    .record-image {
+      min-height: 94px;
+      background-size: cover;
+      background-position: center;
+      border-radius: 6px;
+    }
+
+    .record-card h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .record-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .record-empty {
+      padding: 28px 18px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .record-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mini-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: var(--surface-soft);
+      border-radius: 999px;
+    }
+
+    .mini-pill.status-favorite {
+      color: var(--wine);
+      background: #f5ebe7;
+    }
+
+    .mini-pill.status-accepted {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .mini-pill.status-favorite::before,
+    .mini-pill.status-accepted::before {
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .mini-pill.status-favorite::before {
+      content: "♡";
+    }
+
+    .mini-pill.status-accepted::before {
+      content: "✓";
+    }
+
+    .profile-hero {
+      padding: 18px;
+      color: #fffdf8;
+      background:
+        linear-gradient(135deg, rgba(47, 74, 61, 0.94), rgba(122, 59, 63, 0.66)),
+        url("https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80") center / cover;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .profile-hero h2 {
+      margin: 0 0 8px;
+      font-size: 21px;
+    }
+
+    .profile-hero p {
+      max-width: 260px;
+      margin: 0;
+      color: rgba(255, 253, 248, 0.78);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .memory-card {
+      padding: 15px;
+      margin-top: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .memory-card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .memory-row {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .memory-row:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .memory-row b {
+      color: var(--ink);
+      font-weight: 620;
+    }
+
+    .edit-links {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .edit-links button {
+      color: var(--accent);
+      font-size: 13px;
+    }
+
+    .toast {
+      position: absolute;
+      z-index: 20;
+      left: 24px;
+      right: 24px;
+      bottom: calc(var(--nav-height) + 16px);
+      display: none;
+      padding: 12px 14px;
+      color: #fff;
+      background: rgba(36, 34, 30, 0.92);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .toast.show {
+      display: block;
+      animation: lift 240ms ease both;
+    }
+
+    @keyframes lift {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .memory-sheet {
+      position: absolute;
+      z-index: 15;
+      left: 18px;
+      right: 18px;
+      bottom: calc(var(--nav-height) + 18px);
+      display: none;
+      padding: 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 18px 50px rgba(36, 34, 30, 0.18);
+    }
+
+    .memory-sheet.show {
+      display: block;
+    }
+
+    .memory-sheet h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .memory-sheet p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .original-modal {
+      position: absolute;
+      z-index: 42;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(22, 21, 18, 0.46);
+      backdrop-filter: blur(10px);
+    }
+
+    .original-modal.show {
+      display: flex;
+    }
+
+    .original-modal-card {
+      width: min(100%, 356px);
+      max-height: min(78vh, 620px);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      background: var(--surface);
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(22, 21, 18, 0.24);
+    }
+
+    .original-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .original-modal-head strong {
+      font-size: 15px;
+    }
+
+    .original-modal-head button {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: var(--paper);
+      border-radius: 50%;
+      font-size: 18px;
+    }
+
+    .original-modal-card img {
+      width: 100%;
+      max-height: calc(min(78vh, 620px) - 59px);
+      object-fit: contain;
+      background: #eee8df;
+    }
+
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .sheet-actions button {
+      height: 42px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .sheet-actions button:first-child {
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .sheet-actions button:last-child {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    @media (max-width: 460px) {
+      body {
+        padding: 0;
+      }
+
+      .phone {
+        width: 100vw;
+        height: 100vh;
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="phone" aria-label="衣渐佳移动端原型">
+    <input id="item-file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    <input id="outfit-file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    <input id="review-file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    <section class="screen active" id="home-screen">
+      <header class="topbar home-topbar">
+        <div>
+          <p class="brand-kicker">YIJIANJIA · AI STYLIST</p>
+          <div class="brand-line">
+            <strong>衣渐佳</strong>
+            <span>AI 造型师</span>
+          </div>
+          <p class="home-subtitle">今天穿什么，不用再纠结</p>
+        </div>
+        <button class="bell-btn" data-screen="records-screen" aria-label="查看搭配记录">
+          <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+        </button>
+      </header>
+
+      <div class="content home-content">
+        <button class="demo-hero" data-upload-item aria-label="上传一件衣服，AI 帮你搭完整一套">
+          <span class="demo-copy">
+            <span class="demo-badge">
+              <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M15 4V2"></path>
+                <path d="M15 16v-2"></path>
+                <path d="M8 9h2"></path>
+                <path d="M20 9h2"></path>
+                <path d="m17.8 11.8 1.4 1.4"></path>
+                <path d="m17.8 6.2 1.4-1.4"></path>
+                <path d="m2 22 9-9"></path>
+                <path d="m12.5 6.5 5 5"></path>
+              </svg>
+              AI 造型演示
+            </span>
+            <span class="demo-heading">上传一件衣服，AI 帮你搭完整一套</span>
+          </span>
+          <span class="demo-piece">
+            <img alt="深灰高腰阔腿裤示意" src="https://modao.cc/agent-py/media/generated_images/2026-08-18/566117c60dff480ebd0d6153e0af072a.jpg">
+            <span class="demo-label">你的单品</span>
+          </span>
+          <span class="demo-arrow">
+            <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M5 12h14"></path>
+              <path d="m13 5 7 7-7 7"></path>
+            </svg>
+          </span>
+          <span class="demo-look">
+            <img alt="完整穿搭参考示意" src="https://modao.cc/agent-py/media/generated_images/2026-08-18/b47bf45b9fef47248cd63d429130a177.jpg">
+            <span class="demo-label">完整 Look</span>
+          </span>
+        </button>
+
+        <div class="section-head">
+          <h2>今天想解决什么？</h2>
+          <span>向左滑动</span>
+        </div>
+
+        <div class="home-task-rail" aria-label="首页任务入口">
+          <button class="home-task-card featured" data-upload-item>
+            <span class="home-task-icon">
+              <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.2 2.45l1.2 3.74a1 1 0 0 0 1.22.66L7 9.7V22h10V9.7l2.16.61a1 1 0 0 0 1.22-.66l1.2-3.74a2 2 0 0 0-1.2-2.45Z"></path>
+              </svg>
+            </span>
+            <span class="home-task-title">这件怎么搭</span>
+            <span class="home-task-desc">固定一件喜欢的单品，搭完整 Look</span>
+            <span class="primary-badge">主推荐</span>
+            <span class="home-card-art">
+              <img alt="西装和长裤搭配示意" src="https://modao.cc/agent-py/media/generated_images/2026-08-18/9a1427b105af4a01be47d54d4c4d03f5.jpg">
+            </span>
+          </button>
+          <button class="home-task-card green diagnosis-featured" data-upload-outfit>
+            <span class="home-task-icon">
+              <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3l-1.5-2Z"></path>
+                <circle cx="12" cy="13" r="3.5"></circle>
+              </svg>
+            </span>
+            <span class="home-task-title">这身怎么改</span>
+            <span class="home-task-desc">AI 先诊断，再告诉你最值得改的一处</span>
+            <span class="secondary-badge">高频</span>
+            <span class="home-diagnosis-art" aria-hidden="true">
+              <span class="diag-shot before"></span>
+              <span class="diag-shot after"></span>
+              <span class="diag-divider"></span>
+              <span class="diag-label">Before / After</span>
+            </span>
+          </button>
+          <button class="home-task-card warm" data-start-task="occasion">
+            <span class="home-task-icon">
+              <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M8 2v4"></path>
+                <path d="M16 2v4"></path>
+                <path d="M3 10h18"></path>
+                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                <path d="M8 14h.01"></path>
+                <path d="M12 14h.01"></path>
+                <path d="M16 14h.01"></path>
+                <path d="M8 18h.01"></path>
+                <path d="M12 18h.01"></path>
+              </svg>
+            </span>
+            <span class="home-task-title">场合怎么穿</span>
+            <span class="home-task-desc">面试、约会、旅行，按场景给搭配</span>
+          </button>
+        </div>
+
+        <div class="section-head">
+          <h2>试试这样问</h2>
+          <span>不必会穿搭术语</span>
+        </div>
+
+        <div class="prompt-area">
+          <div class="prompt-chips">
+            <button class="prompt-chip" data-upload-item>黑色阔腿裤怎么搭？</button>
+            <button class="prompt-chip" data-start-task="occasion" data-task-note="明天面试怎么穿？">明天面试怎么穿？</button>
+            <button class="prompt-chip" data-upload-outfit data-outfit-note="想显高一点">想显高一点</button>
+            <button class="prompt-chip" data-upload-outfit data-outfit-note="这套总觉得哪里不对">这套总觉得哪里不对</button>
+          </div>
+
+          <div class="say-box">
+            <input value="" placeholder="比如：我只有短上衣，不想穿高跟鞋" aria-label="和 AI 说一句">
+            <button class="send" data-upload-item aria-label="发送">›</button>
+          </div>
+
+          <div class="tip-card" style="margin-top:14px">
+            <span class="tip-mark">
+              <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M15 14c.2-1 .7-1.7 1.5-2.5A5 5 0 1 0 8 8c0 1.3.5 2.5 1.5 3.5.8.8 1.3 1.5 1.5 2.5"></path>
+                <path d="M9 18h6"></path>
+                <path d="M10 22h4"></path>
+              </svg>
+            </span>
+            <span>不用懂穿搭术语，拍下来就好。AI 会从比例、色彩和场景帮你拆解，优先给最少改动的建议。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="upload-screen">
+      <header class="topbar">
+        <button class="back" data-screen="home-screen" aria-label="返回">‹</button>
+        <div class="page-title" id="upload-title">这件怎么搭？</div>
+        <span class="top-action top-spacer" aria-hidden="true"></span>
+      </header>
+
+      <div class="content upload-content">
+        <p class="upload-intro" id="upload-subtitle">拍下你想固定保留的那件衣服，AI 会先识别，再帮你搭完整一套。</p>
+
+        <button class="upload-dropzone" data-open-gallery>
+          <span class="upload-camera-mark">
+            <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3l-1.5-2Z"></path>
+              <circle cx="12" cy="13" r="3.5"></circle>
+              <path d="M12 9.5v7"></path>
+              <path d="M8.5 13h7"></path>
+            </svg>
+          </span>
+          <h2 id="upload-main-title">拍下单品</h2>
+          <p id="upload-helper">尽量平铺或挂起来拍，识别会更准确。</p>
+        </button>
+
+        <div class="upload-actions">
+          <button class="upload-action primary-action" data-open-camera>
+            <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3l-1.5-2Z"></path>
+              <circle cx="12" cy="13" r="3.5"></circle>
+            </svg>
+            拍照
+          </button>
+          <button class="upload-action" data-open-gallery>
+            <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+              <circle cx="8.5" cy="9" r="1.5"></circle>
+              <path d="m21 15-5-5L5 20"></path>
+            </svg>
+            从相册选择
+          </button>
+        </div>
+
+        <div class="upload-or">或者</div>
+        <label class="upload-prompt-label" for="upload-free-text">也可以先告诉 AI</label>
+        <textarea class="soft-textarea" id="upload-free-text" placeholder="例如：这条黑色阔腿裤怎么搭比较通勤？"></textarea>
+        <p class="label" id="upload-note">可以附带场合、身高或不想穿的单品。</p>
+        <button class="primary upload-submit" data-upload-text-submit>带着这句去上传</button>
+      </div>
+    </section>
+
+    <section class="screen" id="confirm-screen">
+      <header class="topbar">
+        <button class="back" data-screen="home-screen" aria-label="返回">‹</button>
+        <div class="page-title">单品确认</div>
+        <button class="top-action" data-screen="profile-screen">我的</button>
+      </header>
+
+      <div class="content">
+        <div class="segments">
+          <button class="segment active">这件怎么搭</button>
+          <button class="segment" data-upload-outfit>这身怎么改</button>
+          <button class="segment" data-toast="场合穿搭会按面试、约会、旅行等场景生成">场合怎么穿</button>
+        </div>
+
+        <div class="upload-preview">
+          <div class="item-photo" id="confirm-item-photo" role="img" aria-label="用户上传的单品照片"></div>
+          <div class="analysis-box">
+            <span class="label" style="margin-top:0">AI 识别结果</span>
+            <h2 class="result-name" id="confirm-item-name">深灰色高腰阔腿西装裤</h2>
+            <p id="confirm-item-summary">版型垂坠，风格偏简洁通勤。最适合用浅色上衣抬高视觉重心。</p>
+          </div>
+        </div>
+
+        <span class="label">标签</span>
+        <div class="chips" id="confirm-item-tags" data-choice-group>
+          <button class="chip active">深灰</button>
+          <button class="chip active">阔腿</button>
+          <button class="chip active">高腰</button>
+          <button class="chip active">垂坠</button>
+          <button class="chip">通勤</button>
+        </div>
+
+        <span class="label">这件就是你想固定保留的吗？</span>
+        <div class="chips">
+          <button class="chip active">固定这件</button>
+          <button class="chip" data-toast="识别修改入口：可改颜色、版型、长度和场景">识别不准，修改</button>
+        </div>
+
+        <span class="label">场景</span>
+        <div class="chips" id="occasion-group" data-choice-group>
+          <button class="chip active">不限</button>
+          <button class="chip">通勤</button>
+          <button class="chip">约会</button>
+          <button class="chip">面试</button>
+          <button class="chip">休闲</button>
+        </div>
+
+        <span class="label">风格</span>
+        <div class="chips" id="style-group" data-choice-group>
+          <button class="chip active">AI 推荐</button>
+          <button class="chip">简约</button>
+          <button class="chip">温柔</button>
+          <button class="chip">韩系</button>
+          <button class="chip">法式</button>
+        </div>
+
+        <span class="label">其他要求</span>
+        <textarea class="soft-textarea" id="item-constraints">我只有短上衣，不想穿高跟鞋</textarea>
+
+        <button class="primary" id="generate-recommendations-btn" data-generate-item>生成我的搭配</button>
+      </div>
+    </section>
+
+    <section class="screen" id="result-screen">
+      <header class="topbar">
+        <button class="back" data-screen="confirm-screen" aria-label="返回">‹</button>
+        <div class="page-title">AI 为你搭好了</div>
+        <button class="top-action" data-screen="records-screen">记录</button>
+      </header>
+
+      <div class="content result-content">
+        <div class="lock-card result-lock">
+          <div>
+            <strong>已固定：</strong>
+            <span>深灰高腰阔腿裤 · 通勤 · AI 推荐</span>
+          </div>
+          <button class="secondary" data-screen="confirm-screen">修改</button>
+        </div>
+
+        <div class="progress-line">
+          <span>搭配参考图，不是精确试穿</span>
+          <span id="card-count">1 / 3</span>
+        </div>
+
+        <div class="carousel" id="outfit-carousel" aria-label="三套搭配方案">
+          <article class="outfit-card">
+            <div class="fixed-strip">
+              <div class="thumb"></div>
+              <div>
+                <strong>固定单品</strong>
+                <span>深灰高腰阔腿裤</span>
+              </div>
+            </div>
+            <div class="look-image look-one" role="img" aria-label="清爽通勤搭配参考图">
+              <span class="look-badge">A · 稳妥不出错</span>
+              <span class="look-caption">清爽通勤</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">
+                <h3>清爽通勤</h3>
+                <span class="tagline">适合见客户</span>
+              </div>
+              <div class="style-tags">
+                <span class="style-tag">通勤</span>
+                <span class="style-tag">简约</span>
+                <span class="style-tag">显高</span>
+              </div>
+              <div class="list">
+                <div class="list-row"><b>上衣</b><span>蓝白条纹衬衫，前摆轻塞</span></div>
+                <div class="list-row"><b>鞋子</b><span>黑色窄头乐福鞋</span></div>
+                <div class="list-row"><b>外套</b><span>浅灰西装外套，可选</span></div>
+                <div class="list-row"><b>配饰</b><span>银色小耳饰，结构感肩包</span></div>
+              </div>
+              <p class="reason">浅色上衣提亮上半身，深灰裤子保留专业感，窄头鞋让比例更利落。</p>
+            </div>
+            <div class="card-actions">
+              <button class="action" data-toast="已收藏到搭配记录">♡ 收藏</button>
+              <button class="action accept" data-memory>✓ 采纳</button>
+              <button class="action" data-replace>↻ 换一个</button>
+            </div>
+          </article>
+
+          <article class="outfit-card">
+            <div class="fixed-strip">
+              <div class="thumb"></div>
+              <div>
+                <strong>固定单品</strong>
+                <span>深灰高腰阔腿裤</span>
+              </div>
+            </div>
+            <div class="look-image look-two" role="img" aria-label="酒红点睛搭配参考图">
+              <span class="look-badge">B · 更出彩</span>
+              <span class="look-caption">酒红点睛</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">
+                <h3>酒红点睛</h3>
+                <span class="tagline">适合有存在感的工作日</span>
+              </div>
+              <div class="style-tags">
+                <span class="style-tag">轻熟</span>
+                <span class="style-tag">有气色</span>
+                <span class="style-tag">不夸张</span>
+              </div>
+              <div class="list">
+                <div class="list-row"><b>上衣</b><span>酒红细针织，短款或轻塞</span></div>
+                <div class="list-row"><b>鞋子</b><span>黑色低跟单鞋或窄头乐福鞋</span></div>
+                <div class="list-row"><b>外套</b><span>短款羊毛开衫或薄风衣</span></div>
+                <div class="list-row"><b>配饰</b><span>黑色小包，金属感耳饰</span></div>
+              </div>
+              <p class="reason">深灰裤子比较克制，酒红上衣能提气色，但面积不大，不会破坏整体的高级感。</p>
+            </div>
+            <div class="card-actions">
+              <button class="action" data-toast="已收藏到搭配记录">♡ 收藏</button>
+              <button class="action accept" data-memory>✓ 采纳</button>
+              <button class="action" data-replace>↻ 换一个</button>
+            </div>
+          </article>
+
+          <article class="outfit-card">
+            <div class="fixed-strip">
+              <div class="thumb"></div>
+              <div>
+                <strong>固定单品</strong>
+                <span>深灰高腰阔腿裤</span>
+              </div>
+            </div>
+            <div class="look-image look-three" role="img" aria-label="轻松周末搭配参考图">
+              <span class="look-badge">C · 换种感觉</span>
+              <span class="look-caption">轻松周末</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">
+                <h3>轻松周末</h3>
+                <span class="tagline">适合周末见朋友</span>
+              </div>
+              <div class="style-tags">
+                <span class="style-tag">休闲</span>
+                <span class="style-tag">松弛</span>
+                <span class="style-tag">不费力</span>
+              </div>
+              <div class="list">
+                <div class="list-row"><b>上衣</b><span>白 T 或宽松短袖衬衫</span></div>
+                <div class="list-row"><b>鞋子</b><span>干净白色运动鞋</span></div>
+                <div class="list-row"><b>外套</b><span>薄针织披肩或短款夹克</span></div>
+                <div class="list-row"><b>配饰</b><span>大号软包，细框墨镜</span></div>
+              </div>
+              <p class="reason">用白 T 和运动鞋把固定西裤变轻松，通勤后也能直接约朋友，不会显得太正式。</p>
+            </div>
+            <div class="card-actions">
+              <button class="action" data-toast="已收藏到搭配记录">♡ 收藏</button>
+              <button class="action accept" data-memory>✓ 采纳</button>
+              <button class="action" data-replace>↻ 换一个</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="question-panel" id="replace-panel">
+          <h3>还想怎么调整？</h3>
+          <div class="chips">
+            <button class="chip">更显高</button>
+            <button class="chip">更休闲</button>
+            <button class="chip">不换鞋</button>
+            <button class="chip">我没有这件</button>
+            <button class="chip">颜色太浅</button>
+          </div>
+          <span class="label">追问</span>
+          <div class="say-box">
+            <input placeholder="我只有短上衣，可以怎么改？">
+            <button class="send" data-toast="已基于当前方案继续追问">›</button>
+          </div>
+          <button class="primary" data-screen="review-screen">上传试穿图复评</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="diagnosis-screen">
+      <header class="topbar">
+        <button class="back" data-screen="home-screen" aria-label="返回">‹</button>
+        <div class="page-title">AI 帮你看看了</div>
+        <button class="top-action" data-screen="records-screen">记录</button>
+      </header>
+
+      <div class="content diagnosis-content">
+        <section class="diagnosis-panel">
+          <div class="diagnosis-headline">
+            <h2>AI 造型师看完了</h2>
+            <button class="original-preview-btn" data-original-preview>查看原图 ↗</button>
+          </div>
+          <p id="diagnosis-summary">这身基础其实不错，清爽、日常，配色也比较协调。主要问题不是“不好看”，而是比例和视觉重点还可以更明确。</p>
+
+          <div class="diagnosis-grid" id="diagnosis-grid">
+            <div class="diagnosis-row">
+              <span class="diag-good">✓</span>
+              <b>配色</b>
+              <span>清爽协调</span>
+            </div>
+            <div class="diagnosis-row">
+              <span class="diag-good">✓</span>
+              <b>场景</b>
+              <span>日常合适</span>
+            </div>
+            <div class="diagnosis-row">
+              <span class="diag-warn">△</span>
+              <b>比例</b>
+              <span>腰线可见</span>
+            </div>
+            <div class="diagnosis-row">
+              <span class="diag-warn">△</span>
+              <b>视觉重点</b>
+              <span>略显普通</span>
+            </div>
+          </div>
+
+          <div class="core-problem" id="core-problem">
+            <span>最值得改</span>
+            <p id="core-problem-text">这身基础已经协调，上衣偏修身且腰线可见；更值得优化的是层次感和视觉重点。</p>
+          </div>
+
+          <button class="down-cta" data-scroll-target="main-fix">↓ 看 AI 怎么改</button>
+        </section>
+
+        <section class="recommend-panel" id="main-fix">
+          <div class="recommend-head">
+            <div>
+              <h2 id="main-plan-title">AI 最推荐</h2>
+              <span id="main-plan-budget">只改 2 处 · 效果最明显</span>
+            </div>
+            <span class="recommend-badge">主修改方案</span>
+          </div>
+
+          <div class="before-after" id="before-after-slider">
+            <div class="ba-image ba-before" id="ba-before-image" aria-hidden="true"></div>
+            <div class="ba-image ba-after" id="ba-after-image" aria-hidden="true"></div>
+            <span class="ba-label before">BEFORE</span>
+            <span class="ba-label after">AFTER</span>
+            <span class="ba-divider"></span>
+            <span class="ba-handle">↔</span>
+            <span class="ba-hint">原图 / 改进后对比</span>
+            <input class="ba-range" type="range" min="8" max="92" value="52" aria-label="拖动查看修改前后效果">
+          </div>
+
+          <div class="change-list" id="change-list">
+            <h3 id="change-list-title">这次只改两处</h3>
+
+            <div class="change-block">
+              <h4>① 裤型</h4>
+              <div class="swap-line">
+                <span class="swap-pill">原：蓝色直筒裤</span>
+                <span class="swap-arrow">↓</span>
+                <span class="swap-pill">改：高腰微喇牛仔裤</span>
+              </div>
+              <p>现有腰线已经能看出来，可以通过小面积配饰或外搭短层次，让视觉重点更明确。</p>
+              <div class="micro-actions">
+                <button class="micro-action" data-toast="已告诉 AI：不换裤子，改用露腰线和鞋型优化">不想换裤子</button>
+                <button class="micro-action" data-toast="已改为：只优化鞋型和上衣长度">只换上衣</button>
+              </div>
+            </div>
+
+            <div class="change-block">
+              <h4>② 增加一个视觉重点</h4>
+              <div class="swap-line">
+                <span class="swap-pill">原：基础色为主</span>
+                <span class="swap-arrow">+</span>
+                <span class="swap-pill">加：酒红色腋下包</span>
+              </div>
+              <p>基础色里增加一点小面积撞色，会更有精神，但不会太抢眼。</p>
+              <div class="micro-actions">
+                <button class="micro-action" data-toast="已告诉 AI：没有这个包，换成已有配饰">我没有</button>
+                <button class="micro-action" data-toast="已告诉 AI：换成低饱和颜色">换个颜色</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="diagnosis-actions">
+            <button class="action" data-record-action="favorite" data-record-scope="outfit-main">♡ 收藏</button>
+            <button class="action accept" data-record-action="accepted" data-record-scope="outfit-main" data-memory>✓ 就这样改</button>
+          </div>
+          <div class="diagnosis-actions">
+            <button class="primary" data-screen="review-screen">上传试穿图复评</button>
+          </div>
+        </section>
+
+        <section class="light-options">
+          <h2>两个轻量备选</h2>
+          <div class="option-grid" id="light-option-grid">
+            <button class="option-card" data-toast="已切换到轻量方案：不换裤子">
+              <span class="option-index">01</span>
+              <span>
+                <strong>不换裤子版</strong>
+                <span>把上衣前摆轻塞，鞋子换窄头款，再用短项链把视线往上提。</span>
+              </span>
+            </button>
+            <button class="option-card" data-toast="已切换到轻量方案：不加包">
+              <span class="option-index">02</span>
+              <span>
+                <strong>不加包版</strong>
+                <span>用耳饰、发型或鞋袜做小重点，整体仍然清爽，不会增加购物负担。</span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <div class="ai-chat-dock">
+          <div class="say-box">
+            <input placeholder="问问 AI：我不想换裤子，可以怎么改？" aria-label="继续和 AI 调整这身穿搭">
+            <button class="send" data-toast="已继续基于当前 Look 协商修改">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="review-screen">
+      <header class="topbar">
+        <button class="back" id="review-back-button" data-screen="diagnosis-screen" aria-label="返回">‹</button>
+        <div class="page-title">穿后复评</div>
+        <button class="top-action" data-screen="records-screen">记录</button>
+      </header>
+
+      <div class="content">
+        <div class="hero-copy">
+          <h1 style="font-size:26px">按推荐搭好了？</h1>
+          <p>拍给我看看，我会只评价这次改动是否有效。</p>
+        </div>
+
+        <button class="review-upload" id="review-upload-btn" data-start-task="review">+ 上传试穿图</button>
+
+        <div class="compare">
+          <div class="compare-photo" id="review-original-photo" data-label="原图" role="img" aria-label="原始穿搭图"></div>
+          <div class="compare-photo" id="review-actual-photo" data-label="试穿后" role="img" aria-label="用户实际试穿图"></div>
+        </div>
+
+        <div class="report">
+          <h3 id="review-report-title">AI 复评</h3>
+          <p id="review-overall">上传试穿图后，我会重新比较原图和你实际改完的效果。</p>
+          <b>已经改善</b>
+          <ul class="review-list" id="review-improved-list">
+            <li>等待上传试穿图。</li>
+          </ul>
+          <b>还可以优化</b>
+          <ul class="review-list" id="review-issue-list">
+            <li>AI 会判断是否还有比例、色彩或场景问题。</li>
+          </ul>
+          <div class="score-list" id="review-score-list">
+            <div><b>状态：</b>等待复评</div>
+          </div>
+          <div class="review-next" id="review-next">下一步建议会在复评后生成。</div>
+          <div class="card-actions review-actions">
+            <button class="action" data-record-action="favorite" data-record-scope="review">♡ 收藏复评</button>
+            <button class="action accept" data-record-action="accepted" data-record-scope="review">✓ 保存复评</button>
+          </div>
+          <div class="satisfaction">
+            <button class="chip active" data-memory>很满意</button>
+            <button class="chip" data-toast="已记录：还可以">还可以</button>
+            <button class="chip" data-toast="已记录：不满意，后续会少推类似组合">不满意</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="records-screen">
+      <header class="topbar">
+        <button class="back" data-screen="home-screen" aria-label="返回">‹</button>
+        <div class="page-title">搭配记录</div>
+        <span class="top-action top-spacer" aria-hidden="true"></span>
+      </header>
+
+      <div class="content">
+        <div class="record-tabs">
+          <button class="chip active" data-record-filter="all">全部</button>
+          <button class="chip" data-record-filter="favorite">♡ 收藏</button>
+          <button class="chip" data-record-filter="accepted">已采纳</button>
+        </div>
+
+        <div id="records-list">
+        <button class="record-card" data-screen="result-screen">
+          <div class="record-image" style="background-image:url('https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=360&q=80')"></div>
+          <div>
+            <h3>深灰阔腿裤的 3 套搭配</h3>
+            <p>收藏了「A · 稳妥不出错」，已采纳塞衣角和窄头鞋建议。</p>
+            <div class="record-meta">
+              <span class="mini-pill">今天</span>
+              <span class="mini-pill status-accepted">已采纳</span>
+              <span class="mini-pill">可复评</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="record-card" data-screen="review-screen">
+          <div class="record-image" style="background-image:url('https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=360&q=80')"></div>
+          <div>
+            <h3>通勤穿搭复评</h3>
+            <p>AI 判断：腰线更明显，鞋型偏休闲，正式感稍弱。</p>
+            <div class="record-meta">
+              <span class="mini-pill">昨天</span>
+              <span class="mini-pill">复评完成</span>
+            </div>
+          </div>
+        </button>
+
+        <button class="record-card" data-screen="profile-screen">
+          <div class="record-image" style="background-image:url('https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=360&q=80')"></div>
+          <div>
+            <h3>AI 记住的新偏好</h3>
+            <p>低饱和、简洁、显高，不喜欢高跟鞋和过度甜美。</p>
+            <div class="record-meta">
+              <span class="mini-pill">风格档案</span>
+              <span class="mini-pill">可修改</span>
+            </div>
+          </div>
+        </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="profile-screen">
+      <header class="topbar">
+        <button class="back" data-screen="home-screen" aria-label="返回">‹</button>
+        <div class="page-title">我的风格</div>
+        <button class="top-action" data-toast="编辑资料入口">编辑</button>
+      </header>
+
+      <div class="content">
+        <div class="profile-hero">
+          <h2>AI 对你的了解</h2>
+          <p>这些内容只在你确认后写入，之后可以随时删除、修改或不要记住。</p>
+        </div>
+
+        <div class="memory-card">
+          <h3>风格档案</h3>
+          <div class="memory-row">
+            <b>偏好</b>
+            <span>低饱和、简洁、显高、上短下长、线条利落</span>
+          </div>
+          <div class="memory-row">
+            <b>雷区</b>
+            <span>高跟鞋、紧身上衣、过度甜美、大面积亮色</span>
+          </div>
+          <div class="memory-row">
+            <b>场景</b>
+            <span>通勤、周末出门、朋友聚会</span>
+          </div>
+          <div class="memory-row">
+            <b>目标</b>
+            <span>从普通休闲，靠近简洁轻熟</span>
+          </div>
+          <div class="edit-links">
+            <button data-toast="可逐条修改">修改</button>
+            <button data-toast="已删除这条记忆">删除</button>
+            <button data-toast="后续不会记住这类信息">不要记住</button>
+          </div>
+        </div>
+
+        <div class="memory-card">
+          <h3>AI 建议的关键词</h3>
+          <div class="chips">
+            <button class="chip active">通勤轻熟</button>
+            <button class="chip active">低饱和</button>
+            <button class="chip active">短上衣</button>
+            <button class="chip">法式日常</button>
+            <button class="chip">结构感包</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="bottom-nav" aria-label="底部导航">
+      <button class="nav-item active" data-screen="home-screen">
+        <span class="nav-icon">
+          <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m3 10 9-7 9 7"></path>
+            <path d="M5 10v10h14V10"></path>
+            <path d="M9 20v-6h6v6"></path>
+          </svg>
+        </span>
+        <span>搭配</span>
+      </button>
+      <button class="nav-item" data-screen="records-screen">
+        <span class="nav-icon">
+          <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M8 6h13"></path>
+            <path d="M8 12h13"></path>
+            <path d="M8 18h13"></path>
+            <path d="M3 6h.01"></path>
+            <path d="M3 12h.01"></path>
+            <path d="M3 18h.01"></path>
+          </svg>
+        </span>
+        <span>记录</span>
+      </button>
+      <button class="nav-item" data-screen="profile-screen">
+        <span class="nav-icon">
+          <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+          </svg>
+        </span>
+        <span>我的</span>
+      </button>
+    </nav>
+
+    <div class="memory-sheet" id="memory-sheet">
+      <h3>要记住这条偏好吗？</h3>
+      <p>你可能喜欢：低饱和、简洁、显高的搭配；不想穿高跟鞋。</p>
+      <div class="sheet-actions">
+        <button data-close-sheet data-toast="已写入风格档案">记住</button>
+        <button data-close-sheet>不用</button>
+      </div>
+    </div>
+
+    <div class="original-modal" id="original-modal" aria-hidden="true">
+      <div class="original-modal-card" role="dialog" aria-label="原图预览">
+        <div class="original-modal-head">
+          <strong>原图预览</strong>
+          <button data-close-original aria-label="关闭原图预览">×</button>
+        </div>
+        <img id="diagnosis-photo-img" alt="用户上传的完整穿搭照片" src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80">
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const screens = Array.from(document.querySelectorAll(".screen"));
+    const navItems = Array.from(document.querySelectorAll(".nav-item"));
+    const toast = document.getElementById("toast");
+    const memorySheet = document.getElementById("memory-sheet");
+    const carousel = document.getElementById("outfit-carousel");
+    const cardCount = document.getElementById("card-count");
+    const itemFileInput = document.getElementById("item-file-input");
+    const outfitFileInput = document.getElementById("outfit-file-input");
+    const reviewFileInput = document.getElementById("review-file-input");
+    const uploadTitle = document.getElementById("upload-title");
+    const uploadSubtitle = document.getElementById("upload-subtitle");
+    const uploadMainTitle = document.getElementById("upload-main-title");
+    const uploadHelper = document.getElementById("upload-helper");
+    const uploadFreeText = document.getElementById("upload-free-text");
+    const uploadNote = document.getElementById("upload-note");
+    const confirmItemPhoto = document.getElementById("confirm-item-photo");
+    const confirmItemName = document.getElementById("confirm-item-name");
+    const confirmItemSummary = document.getElementById("confirm-item-summary");
+    const confirmItemTags = document.getElementById("confirm-item-tags");
+    const occasionGroup = document.getElementById("occasion-group");
+    const styleGroup = document.getElementById("style-group");
+    const itemConstraints = document.getElementById("item-constraints");
+    const generateButton = document.getElementById("generate-recommendations-btn");
+    const homePromptInput = document.querySelector("#home-screen .say-box input");
+    const diagnosisPhotoImg = document.getElementById("diagnosis-photo-img");
+    const originalModal = document.getElementById("original-modal");
+    const diagnosisSummary = document.getElementById("diagnosis-summary");
+    const diagnosisGrid = document.getElementById("diagnosis-grid");
+    const coreProblemText = document.getElementById("core-problem-text");
+    const mainPlanTitle = document.getElementById("main-plan-title");
+    const mainPlanBudget = document.getElementById("main-plan-budget");
+    const baBeforeImage = document.getElementById("ba-before-image");
+    const baAfterImage = document.getElementById("ba-after-image");
+    const changeList = document.getElementById("change-list");
+    const changeListTitle = document.getElementById("change-list-title");
+    const lightOptionGrid = document.getElementById("light-option-grid");
+    const recordsList = document.getElementById("records-list");
+    const recordTabs = Array.from(document.querySelectorAll("[data-record-filter]"));
+    const reviewUploadButton = document.getElementById("review-upload-btn");
+    const reviewBackButton = document.getElementById("review-back-button");
+    const reviewOriginalPhoto = document.getElementById("review-original-photo");
+    const reviewActualPhoto = document.getElementById("review-actual-photo");
+    const reviewReportTitle = document.getElementById("review-report-title");
+    const reviewOverall = document.getElementById("review-overall");
+    const reviewImprovedList = document.getElementById("review-improved-list");
+    const reviewIssueList = document.getElementById("review-issue-list");
+    const reviewScoreList = document.getElementById("review-score-list");
+    const reviewNext = document.getElementById("review-next");
+    function getApiBaseUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const queryApi = params.get("api");
+      if (queryApi) {
+        localStorage.setItem("yijianjia_api_base_url", queryApi.replace(/\/$/, ""));
+      }
+      return (
+        window.AIDRESSING_API_BASE_URL ||
+        localStorage.getItem("yijianjia_api_base_url") ||
+        "http://127.0.0.1:8000/api"
+      );
+    }
+
+    const API_BASE_URL = getApiBaseUrl();
+    const STORAGE_KEY = "yijianjia_records_v1";
+    const currentSession = {
+      imageId: null,
+      imageUrl: null,
+      analyzedItem: null,
+      occasion: "不限",
+      desiredStyle: "AI 推荐",
+      freeTextConstraints: "",
+      recommendations: [],
+      sessionState: {
+        locked_items: [],
+        unavailable_items: [],
+        available_items: [],
+        style_constraints: [],
+        color_constraints: [],
+        occasion_constraints: [],
+        comfort_constraints: [],
+        rejected_items: [],
+        user_notes: "",
+        current_plan_id: "",
+        current_recommendation_version: 0
+      }
+    };
+    const currentOutfitSession = {
+      imageId: null,
+      imageUrl: null,
+      diagnosis: null,
+      refinement: null,
+      freeTextConstraints: ""
+    };
+    const currentReviewSession = {
+      originalImageId: null,
+      reviewedImageId: null,
+      originalImage: null,
+      reviewedImage: null,
+      report: null,
+      planId: "",
+      freeTextFeedback: ""
+    };
+    const UPLOAD_TASKS = {
+      item: {
+        title: "这件怎么搭？",
+        subtitle: "拍下你想固定保留的那件衣服，AI 会先识别，再帮你搭完整一套。",
+        mainTitle: "拍下单品",
+        helper: "尽量平铺或挂起来拍，识别会更准确。",
+        placeholder: "例如：这条黑色阔腿裤怎么搭比较通勤？",
+        note: "可以附带场合、身高或不想穿的单品。"
+      },
+      outfit: {
+        title: "这身怎么改？",
+        subtitle: "上传今天这身完整 Look，AI 会先诊断，再告诉你最值得改的一处。",
+        mainTitle: "拍下整身 Look",
+        helper: "尽量拍到全身和鞋子，原图会保留完整比例。",
+        placeholder: "例如：我不想换裤子，但想更显高。",
+        note: "可以提前告诉 AI 你不想换什么、没有什么。"
+      },
+      occasion: {
+        title: "场合怎么穿？",
+        subtitle: "告诉我场合，也可以上传已有衣服参考，AI 会按场景给搭配方向。",
+        mainTitle: "上传参考衣服",
+        helper: "可以拍你想用上的单品，也可以只写场合需求。",
+        placeholder: "例如：明天面试，想显得专业但不要太成熟。",
+        note: "场合功能目前先作为入口保留，后续接完整推荐链路。"
+      },
+      review: {
+        title: "穿后复评",
+        subtitle: "按建议改完后，上传真实试穿图，我会和原图对比判断有没有变好。",
+        mainTitle: "拍下试穿图",
+        helper: "尽量用和原图接近的角度，AI 更容易判断改动是否有效。",
+        placeholder: "例如：我按建议换了鞋，但包没有换。",
+        note: "复评会重新比较原图和试穿图。"
+      }
+    };
+    let toastTimer;
+    let previewUrl;
+    let outfitPreviewUrl;
+    let reviewPreviewUrl;
+    let activeRecordFilter = "all";
+    let pendingMemoryRecord = null;
+    let pendingUploadTask = "item";
+
+    function showToast(message) {
+      if (!message) return;
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2100);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+
+    function formatApiError(data) {
+      if (!data) return "请求失败，请确认后端是否正在运行";
+      if (typeof data.detail === "string") return data.detail;
+      if (Array.isArray(data.detail)) {
+        return data.detail.map((item) => item.msg || item.type || "参数错误").join("；");
+      }
+      return "后端返回异常，请稍后再试";
+    }
+
+    async function requestJson(path, options = {}, timeoutMs = 15000) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}${path}`, {
+          ...options,
+          signal: controller.signal
+        });
+
+        let data;
+        try {
+          data = await response.json();
+        } catch (error) {
+          throw new Error("后端返回的不是有效 JSON");
+        }
+
+        if (!response.ok) {
+          throw new Error(formatApiError(data));
+        }
+
+        return data;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          throw new Error("请求超时，请确认后端服务是否正常");
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    function uniqueValues(values) {
+      return Array.from(new Set(values.filter(Boolean)));
+    }
+
+    function isKnownValue(value) {
+      const text = String(value ?? "").trim();
+      const normalized = text.toLowerCase();
+      return Boolean(text) && !["unknown", "未知", "null", "none", "undefined"].includes(normalized);
+    }
+
+    function uniqueKnownValues(values) {
+      return uniqueValues(values.filter(isKnownValue));
+    }
+
+    function joinKnown(values, separator = "") {
+      return uniqueValues(values.filter(isKnownValue)).join(separator);
+    }
+
+    function resolveMediaUrl(imageUrl) {
+      if (!imageUrl) return "";
+      if (/^(https?:|blob:|data:)/.test(imageUrl)) return imageUrl;
+      const backendOrigin = API_BASE_URL.replace(/\/api$/, "");
+      return `${backendOrigin}${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
+    }
+
+    function setElementBackground(element, imageUrl, withOverlay = true) {
+      if (!element || !imageUrl) return;
+      const resolvedUrl = resolveMediaUrl(imageUrl);
+      const overlay = "linear-gradient(180deg, rgba(255, 253, 248, 0), rgba(34, 32, 28, 0.30))";
+      element.style.background = withOverlay
+        ? `${overlay}, url("${resolvedUrl}") center / cover`
+        : `url("${resolvedUrl}") center / cover`;
+    }
+
+    function setContainedBackground(element, imageUrl) {
+      if (!element || !imageUrl) return;
+      const resolvedUrl = resolveMediaUrl(imageUrl);
+      element.style.background = `#ddd5ca url("${resolvedUrl}") center / contain no-repeat`;
+    }
+
+    function setImageSource(element, imageUrl) {
+      if (!element || !imageUrl) return;
+      element.src = resolveMediaUrl(imageUrl);
+    }
+
+    function readSavedRecords() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function writeSavedRecords(records) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(0, 60)));
+      } catch (error) {
+        showToast("本地记录写入失败，请检查浏览器存储权限");
+      }
+    }
+
+    function saveRecord(record) {
+      if (!record) return null;
+      const previous = readSavedRecords();
+      const existing = previous.find((item) => item.key === record.key);
+      const records = previous.filter((item) => item.key !== record.key);
+      const saved = {
+        ...existing,
+        ...record,
+        id: (existing && existing.id) || record.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      records.unshift(saved);
+      writeSavedRecords(records);
+      renderRecords();
+      syncRecordButtons();
+      return saved;
+    }
+
+    function findSavedRecord(key) {
+      if (!key) return null;
+      return readSavedRecords().find((record) => record.key === key) || null;
+    }
+
+    function getRecordDateLabel(createdAt) {
+      if (!createdAt) return "刚刚";
+      const then = new Date(createdAt);
+      const now = new Date();
+      if (then.toDateString() === now.toDateString()) return "今天";
+      return `${then.getMonth() + 1}/${then.getDate()}`;
+    }
+
+    function getRecordActionLabel(action) {
+      const labels = {
+        favorite: "已收藏",
+        accepted: "已采纳",
+        remembered: "已入库"
+      };
+      return labels[action] || "已记录";
+    }
+
+    function findCurrentItemPlan(planId) {
+      return (currentSession.recommendations || []).find((plan) => plan.plan_id === planId);
+    }
+
+    function findCurrentOutfitPlan(scope, planId) {
+      const plans = (currentOutfitSession.refinement && currentOutfitSession.refinement.plans) || [];
+      if (scope === "outfit-option") {
+        return plans.find((plan) => plan.plan_id === planId);
+      }
+      return plans.find((plan) => plan.plan_type === "recommended") || plans[0];
+    }
+
+    function buildItemRecord(button, action) {
+      const planId = button.dataset.planId;
+      const plan = findCurrentItemPlan(planId);
+      if (!plan) return null;
+      const fixedItemName = (currentSession.analyzedItem && currentSession.analyzedItem.name) || "固定单品";
+      return {
+        key: `item:${plan.plan_id}`,
+        type: "item",
+        action,
+        targetScreen: "result-screen",
+        imageUrl: plan.image_url,
+        title: `${plan.strategy_label} · ${plan.title}`,
+        summary: `${fixedItemName}｜${plan.reason}`,
+        tags: ["这件怎么搭", getRecordActionLabel(action), plan.strategy_label]
+      };
+    }
+
+    function buildOutfitRecord(button, action) {
+      const scope = button.dataset.recordScope;
+      const plan = findCurrentOutfitPlan(scope, button.dataset.planId);
+      if (!plan) return null;
+      const typeLabel = scope === "outfit-option" ? "备选方案" : "主修改方案";
+      return {
+        key: `outfit:${plan.plan_id}`,
+        type: "outfit",
+        action,
+        targetScreen: "diagnosis-screen",
+        imageUrl: plan.after_image || currentOutfitSession.imageUrl,
+        title: `${plan.title} · ${typeLabel}`,
+        summary: plan.summary,
+        tags: ["这身怎么改", getRecordActionLabel(action), plan.change_budget]
+      };
+    }
+
+    function buildReviewRecord(action) {
+      const report = currentReviewSession.report;
+      if (!report) return null;
+      return {
+        key: `review:${report.review_id}`,
+        type: "review",
+        action,
+        targetScreen: "review-screen",
+        imageUrl: report.reviewed_image || currentReviewSession.reviewedImage,
+        title: "穿后复评 · AI 对比报告",
+        summary: report.overall_result,
+        tags: ["穿后复评", getRecordActionLabel(action), "已生成报告"]
+      };
+    }
+
+    function getRecordKeyForButton(button) {
+      const scope = button.dataset.recordScope;
+      if (scope === "item") {
+        return button.dataset.planId ? `item:${button.dataset.planId}` : "";
+      }
+      if (scope === "outfit-main" || scope === "outfit-option") {
+        const plan = findCurrentOutfitPlan(scope, button.dataset.planId);
+        return plan ? `outfit:${plan.plan_id}` : "";
+      }
+      if (scope === "review") {
+        const report = currentReviewSession.report;
+        return report ? `review:${report.review_id}` : "";
+      }
+      return "";
+    }
+
+    function syncRecordButtons(root = document) {
+      root.querySelectorAll("[data-record-action]").forEach((button) => {
+        const record = findSavedRecord(getRecordKeyForButton(button));
+        const action = button.dataset.recordAction;
+        button.classList.toggle("is-favorited", Boolean(record && record.action === "favorite" && action === "favorite"));
+        button.classList.toggle("is-accepted", Boolean(record && record.action === "accepted" && action === "accepted"));
+        if (!button.dataset.defaultText) {
+          button.dataset.defaultText = button.textContent.trim();
+        }
+        if (!record) {
+          button.textContent = button.dataset.defaultText;
+          return;
+        }
+        if (record.action === "accepted") {
+          if (action === "accepted") button.textContent = "✓ 已采纳";
+          if (action === "favorite") button.textContent = "♡ 已入库";
+          return;
+        }
+        if (record.action === "favorite" && action === "favorite") {
+          button.textContent = "♥ 已收藏";
+        }
+      });
+    }
+
+    function buildRecordFromButton(button) {
+      const action = button.dataset.recordAction;
+      const scope = button.dataset.recordScope;
+      if (scope === "item") return buildItemRecord(button, action);
+      if (scope === "outfit-main" || scope === "outfit-option") return buildOutfitRecord(button, action);
+      if (scope === "review") return buildReviewRecord(action);
+      return null;
+    }
+
+    function saveMemoryPreference(sourceRecord) {
+      const text = memorySheet.querySelector("p").textContent.trim();
+      return saveRecord({
+        key: `memory:${sourceRecord ? sourceRecord.key : "manual"}`,
+        type: "memory",
+        action: "remembered",
+        targetScreen: "profile-screen",
+        imageUrl: sourceRecord ? sourceRecord.imageUrl : currentOutfitSession.imageUrl || currentSession.imageUrl,
+        title: "AI 记住的新偏好",
+        summary: text,
+        tags: ["风格档案", "已入库", "可修改"]
+      });
+    }
+
+    function renderRecords() {
+      if (!recordsList) return;
+      const records = readSavedRecords();
+      const filtered = activeRecordFilter === "all"
+        ? records
+        : records.filter((record) => record.action === activeRecordFilter);
+
+      if (!filtered.length) {
+        recordsList.innerHTML = `
+          <div class="record-empty">
+            还没有${activeRecordFilter === "favorite" ? "收藏" : activeRecordFilter === "accepted" ? "采纳" : "搭配"}记录。<br>
+            生成方案后点击收藏或采纳，这里会自动入库。
+          </div>`;
+        return;
+      }
+
+      recordsList.innerHTML = filtered.map((record) => `
+        <button class="record-card" data-screen="${escapeAttribute(record.targetScreen || "records-screen")}">
+          <div class="record-image" style="background-image:url('${escapeAttribute(resolveMediaUrl(record.imageUrl || ""))}')"></div>
+          <div>
+            <h3>${escapeHtml(record.title)}</h3>
+            <p>${escapeHtml(record.summary)}</p>
+            <div class="record-meta">
+              <span class="mini-pill">${escapeHtml(getRecordDateLabel(record.createdAt))}</span>
+              ${(record.tags || []).map(renderRecordTag).join("")}
+            </div>
+          </div>
+        </button>`).join("");
+    }
+
+    function renderRecordTag(tag) {
+      const text = String(tag || "");
+      let className = "mini-pill";
+      if (text.includes("收藏")) className += " status-favorite";
+      if (text.includes("采纳")) className += " status-accepted";
+      return `<span class="${className}">${escapeHtml(text)}</span>`;
+    }
+
+    function renderChips(container, values, active = true) {
+      if (!container) return;
+      container.innerHTML = values.map((value) => (
+        `<button class="chip${active ? " active" : ""}">${escapeHtml(value)}</button>`
+      )).join("");
+    }
+
+    function setUploadBusy(isBusy) {
+      document.querySelectorAll("[data-upload-item]").forEach((button) => {
+        button.disabled = isBusy;
+      });
+    }
+
+    function setGenerateBusy(isBusy, label = "AI 正在搭配...") {
+      if (!generateButton) return;
+      if (!generateButton.dataset.defaultText) {
+        generateButton.dataset.defaultText = generateButton.textContent.trim();
+      }
+      generateButton.disabled = isBusy;
+      generateButton.textContent = isBusy ? label : generateButton.dataset.defaultText;
+    }
+
+    function setOutfitUploadBusy(isBusy) {
+      document.querySelectorAll("[data-upload-outfit]").forEach((button) => {
+        button.disabled = isBusy;
+      });
+    }
+
+    function validateImageFile(file) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        showToast("请选择 jpg、png 或 webp 图片");
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast("图片不能超过 10 MB");
+        return false;
+      }
+      return true;
+    }
+
+    function setUploadScreen(task, note = "") {
+      pendingUploadTask = task in UPLOAD_TASKS ? task : "item";
+      const config = UPLOAD_TASKS[pendingUploadTask];
+      if (uploadTitle) uploadTitle.textContent = config.title;
+      if (uploadSubtitle) uploadSubtitle.textContent = config.subtitle;
+      if (uploadMainTitle) uploadMainTitle.textContent = config.mainTitle;
+      if (uploadHelper) uploadHelper.textContent = config.helper;
+      if (uploadFreeText) {
+        uploadFreeText.placeholder = config.placeholder;
+        uploadFreeText.value = note || "";
+      }
+      if (uploadNote) uploadNote.textContent = config.note;
+    }
+
+    function startUploadTask(task, note = "") {
+      const typed = homePromptInput && homePromptInput.value.trim();
+      setUploadScreen(task, note || typed || "");
+      showScreen("upload-screen");
+    }
+
+    function getInputForPendingTask() {
+      if (pendingUploadTask === "outfit") return outfitFileInput;
+      if (pendingUploadTask === "review") return reviewFileInput;
+      return itemFileInput;
+    }
+
+    function openPendingFilePicker(source = "gallery") {
+      if (pendingUploadTask === "occasion") {
+        showToast("场合搭配入口已保留，完整链路会放到下一阶段。");
+        return;
+      }
+      if (pendingUploadTask === "review" && !currentOutfitSession.imageId) {
+        showToast("请先完成一次「这身怎么改」，再上传试穿图复评。");
+        startUploadTask("outfit");
+        return;
+      }
+      const input = getInputForPendingTask();
+      if (!input) return;
+      if (source === "camera") {
+        input.setAttribute("capture", "environment");
+      } else {
+        input.removeAttribute("capture");
+      }
+      input.value = "";
+      input.click();
+    }
+
+    function submitUploadText() {
+      const text = uploadFreeText ? uploadFreeText.value.trim() : "";
+      if (pendingUploadTask === "item") {
+        currentSession.freeTextConstraints = text;
+        openPendingFilePicker("gallery");
+        return;
+      }
+      if (pendingUploadTask === "outfit") {
+        currentOutfitSession.freeTextConstraints = text;
+        openPendingFilePicker("gallery");
+        return;
+      }
+      if (pendingUploadTask === "review") {
+        currentReviewSession.freeTextFeedback = text;
+        openPendingFilePicker("gallery");
+        return;
+      }
+      showToast("已记录场合需求，完整「场合怎么穿」链路会在下一阶段接入。");
+    }
+
+    function renderDiagnosisRows(dimensions) {
+      if (!diagnosisGrid) return;
+      diagnosisGrid.innerHTML = (dimensions || []).map((item) => {
+        const isGood = item.status === "good";
+        const mark = isGood ? "✓" : "△";
+        const className = isGood ? "diag-good" : "diag-warn";
+        return `
+            <div class="diagnosis-row">
+              <span class="${className}">${mark}</span>
+              <b>${escapeHtml(item.dimension)}</b>
+              <span>${escapeHtml(item.summary)}</span>
+            </div>`;
+      }).join("");
+    }
+
+    function renderChangeBlocks(plan) {
+      if (!changeList || !changeListTitle || !plan) return;
+      changeListTitle.textContent = plan.change_budget || "这次只改关键几处";
+      const blocks = (plan.changes || []).map((change, index) => `
+            <div class="change-block">
+              <h4>${index + 1} ${escapeHtml(change.target)}</h4>
+              <div class="swap-line">
+                <span class="swap-pill">原：${escapeHtml(change.from)}</span>
+                <span class="swap-arrow">${escapeHtml(change.action === "增加" ? "+" : "↓")}</span>
+                <span class="swap-pill">${escapeHtml(change.action)}：${escapeHtml(change.to)}</span>
+              </div>
+              <p>${escapeHtml(change.reason)}</p>
+              <div class="micro-actions">
+                <button class="micro-action" data-toast="已告诉 AI：不想改${escapeAttribute(change.target)}">不想改这个</button>
+                <button class="micro-action" data-toast="已告诉 AI：没有类似${escapeAttribute(change.target)}">我没有类似的</button>
+              </div>
+            </div>`).join("");
+
+      changeList.innerHTML = `<h3 id="change-list-title">${escapeHtml(plan.change_budget || "这次只改关键几处")}</h3>${blocks}`;
+    }
+
+    function renderLightOptions(plans) {
+      if (!lightOptionGrid) return;
+      const labelMap = {
+        minimal: "少改就更好",
+        expressive: "更出彩"
+      };
+      lightOptionGrid.innerHTML = (plans || []).map((plan, index) => {
+        const firstChange = (plan.changes || [])[0] || {};
+        const changeText = firstChange.target
+          ? `${firstChange.target}：${firstChange.from || "原搭配"} → ${firstChange.to || "优化后"}`
+          : plan.change_budget;
+        const reasonText = firstChange.reason || plan.summary;
+        return `
+            <button class="option-card" data-record-action="accepted" data-record-scope="outfit-option" data-plan-id="${escapeAttribute(plan.plan_id)}" data-memory>
+              <span class="option-image" style="background-image:url('${escapeAttribute(resolveMediaUrl(plan.after_image || currentOutfitSession.imageUrl))}')">
+                <span class="option-index">${String(index + 1).padStart(2, "0")}</span>
+              </span>
+              <span class="option-body">
+                <strong>${escapeHtml(labelMap[plan.plan_type] || plan.title)}</strong>
+                <span class="option-summary">${escapeHtml(plan.summary)}</span>
+                <span class="option-detail"><b>改动</b> ${escapeHtml(changeText)}</span>
+                <span class="option-detail"><b>理由</b> ${escapeHtml(reasonText)}</span>
+                <span class="option-card-cta">采用这个</span>
+              </span>
+            </button>`;
+      }).join("");
+    }
+
+    function setDiagnosisLoading(file) {
+      if (outfitPreviewUrl) URL.revokeObjectURL(outfitPreviewUrl);
+      outfitPreviewUrl = URL.createObjectURL(file);
+      setImageSource(diagnosisPhotoImg, outfitPreviewUrl);
+      setContainedBackground(baBeforeImage, outfitPreviewUrl);
+      setContainedBackground(baAfterImage, outfitPreviewUrl);
+      if (diagnosisSummary) {
+        diagnosisSummary.textContent = "图片上传中，AI 正在从比例、色彩、场景匹配和视觉重点分析这身穿搭。";
+      }
+      renderDiagnosisRows([
+        { dimension: "上传", status: "good", summary: "图片读取中" },
+        { dimension: "诊断", status: "warning", summary: "等待 AI 分析" }
+      ]);
+      if (coreProblemText) {
+        coreProblemText.textContent = "AI 正在判断最值得改的一处。";
+      }
+      if (mainPlanTitle) mainPlanTitle.textContent = "AI 正在给你改";
+      if (mainPlanBudget) mainPlanBudget.textContent = "上传后生成主修改方案";
+      if (changeList) {
+        changeList.innerHTML = `<h3 id="change-list-title">等待修改方案</h3>`;
+      }
+      if (lightOptionGrid) {
+        lightOptionGrid.innerHTML = "";
+      }
+    }
+
+    function renderOutfitDiagnosis(diagnosis, refinement) {
+      currentOutfitSession.diagnosis = diagnosis;
+      currentOutfitSession.refinement = refinement;
+
+      const plans = refinement.plans || [];
+      const mainPlan = plans.find((plan) => plan.plan_type === "recommended") || plans[0];
+      const alternatives = plans.filter((plan) => plan.plan_id !== (mainPlan && mainPlan.plan_id));
+
+      setImageSource(diagnosisPhotoImg, currentOutfitSession.imageUrl);
+      if (diagnosisSummary) {
+        diagnosisSummary.textContent = diagnosis.overall_summary;
+      }
+      renderDiagnosisRows(diagnosis.diagnosis_dimensions);
+      if (coreProblemText) {
+        coreProblemText.textContent = (diagnosis.main_issues || []).join("；") || "这身整体不错，主要优化比例和视觉重点。";
+      }
+
+      if (mainPlan) {
+        if (mainPlanTitle) mainPlanTitle.textContent = mainPlan.title;
+        if (mainPlanBudget) mainPlanBudget.textContent = mainPlan.change_budget;
+        setContainedBackground(baBeforeImage, mainPlan.before_image || currentOutfitSession.imageUrl);
+        setContainedBackground(baAfterImage, mainPlan.after_image || currentOutfitSession.imageUrl);
+        renderChangeBlocks(mainPlan);
+      }
+      renderLightOptions(alternatives.slice(0, 2));
+      syncRecordButtons(document.getElementById("diagnosis-screen"));
+
+      document.querySelectorAll(".before-after").forEach((slider) => {
+        slider.style.setProperty("--split", "52%");
+        const range = slider.querySelector(".ba-range");
+        if (range) range.value = 52;
+      });
+    }
+
+    function triggerOutfitUpload(note = "") {
+      if (!outfitFileInput) return;
+      const typed = homePromptInput && homePromptInput.value.trim();
+      currentOutfitSession.freeTextConstraints = note || typed || "";
+      outfitFileInput.value = "";
+      outfitFileInput.click();
+    }
+
+    async function uploadAndAnalyzeOutfit(file) {
+      if (!validateImageFile(file)) return;
+
+      showScreen("diagnosis-screen");
+      setOutfitUploadBusy(true);
+      setDiagnosisLoading(file);
+      showToast("穿搭照片上传中...");
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const uploaded = await requestJson("/upload", {
+          method: "POST",
+          body: formData
+        }, 20000);
+
+        currentOutfitSession.imageId = uploaded.image_id;
+        currentOutfitSession.imageUrl = uploaded.image_url;
+        setImageSource(diagnosisPhotoImg, uploaded.image_url);
+        setContainedBackground(baBeforeImage, uploaded.image_url);
+        showToast("AI 正在诊断这身穿搭...");
+
+        const diagnosis = await requestJson("/analyze-outfit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image_id: uploaded.image_id })
+        }, 60000);
+
+        const refinement = await requestJson("/refine-outfit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_id: uploaded.image_id,
+            free_text_constraints: currentOutfitSession.freeTextConstraints,
+            conversation_state: {
+              locked_items: [],
+              rejected_items: [],
+              user_notes: currentOutfitSession.freeTextConstraints
+            }
+          })
+        });
+
+        renderOutfitDiagnosis(diagnosis, refinement);
+        showToast("AI 已生成修改建议");
+      } catch (error) {
+        showToast(error.message || "诊断失败，请稍后再试");
+        if (diagnosisSummary) {
+          diagnosisSummary.textContent = "诊断失败，请确认后端服务已启动，或换一张 jpg、png、webp 图片再试。";
+        }
+        if (coreProblemText) {
+          coreProblemText.textContent = "暂时没有拿到 AI 诊断结果。";
+        }
+      } finally {
+        setOutfitUploadBusy(false);
+      }
+    }
+
+    function getMainOutfitPlan() {
+      const plans = (currentOutfitSession.refinement && currentOutfitSession.refinement.plans) || [];
+      return plans.find((plan) => plan.plan_type === "recommended") || plans[0] || null;
+    }
+
+    function renderReviewList(element, values, fallback) {
+      if (!element) return;
+      const items = values && values.length ? values : [fallback];
+      element.innerHTML = items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+    }
+
+    function prepareReviewScreen() {
+      const originalImage = currentOutfitSession.imageUrl || currentReviewSession.originalImage;
+      if (originalImage) {
+        setContainedBackground(reviewOriginalPhoto, originalImage);
+        currentReviewSession.originalImage = originalImage;
+      }
+      if (currentReviewSession.reviewedImage) {
+        setContainedBackground(reviewActualPhoto, currentReviewSession.reviewedImage);
+      }
+      if (!currentReviewSession.report) {
+        if (reviewReportTitle) reviewReportTitle.textContent = "AI 复评";
+        if (reviewOverall) reviewOverall.textContent = originalImage
+          ? "上传试穿图后，我会重新比较原图和你实际改完的效果。"
+          : "请先完成一次「这身怎么改」，再上传试穿图复评。";
+        renderReviewList(reviewImprovedList, [], "等待上传试穿图。");
+        renderReviewList(reviewIssueList, [], "AI 会判断是否还有比例、色彩或场景问题。");
+        if (reviewScoreList) reviewScoreList.innerHTML = `<div><b>状态：</b>等待复评</div>`;
+        if (reviewNext) reviewNext.textContent = "下一步建议会在复评后生成。";
+      }
+      if (reviewBackButton) {
+        reviewBackButton.dataset.screen = currentOutfitSession.imageId ? "diagnosis-screen" : "home-screen";
+      }
+    }
+
+    function setReviewLoading(file) {
+      if (reviewPreviewUrl) URL.revokeObjectURL(reviewPreviewUrl);
+      reviewPreviewUrl = URL.createObjectURL(file);
+      currentReviewSession.reviewedImage = reviewPreviewUrl;
+      setContainedBackground(reviewActualPhoto, reviewPreviewUrl);
+      setContainedBackground(reviewOriginalPhoto, currentOutfitSession.imageUrl);
+      if (reviewUploadButton) {
+        reviewUploadButton.disabled = true;
+        reviewUploadButton.textContent = "AI 正在复评...";
+      }
+      if (reviewReportTitle) reviewReportTitle.textContent = "AI 正在复评";
+      if (reviewOverall) reviewOverall.textContent = "试穿图上传中，AI 正在对比原图和你改完后的真实效果。";
+      renderReviewList(reviewImprovedList, [], "正在判断哪些地方变好了。");
+      renderReviewList(reviewIssueList, [], "正在检查是否还有比例、色彩或场景问题。");
+      if (reviewScoreList) reviewScoreList.innerHTML = `<div><b>状态：</b>分析中</div>`;
+      if (reviewNext) reviewNext.textContent = "稍等一下，我会给出下一步最小改动建议。";
+    }
+
+    function renderReviewReport(report) {
+      currentReviewSession.report = report;
+      currentReviewSession.originalImageId = report.original_image_id;
+      currentReviewSession.reviewedImageId = report.reviewed_image_id;
+      currentReviewSession.originalImage = report.original_image;
+      currentReviewSession.reviewedImage = report.reviewed_image;
+
+      setContainedBackground(reviewOriginalPhoto, report.original_image);
+      setContainedBackground(reviewActualPhoto, report.reviewed_image);
+      if (reviewReportTitle) reviewReportTitle.textContent = "AI 复评完成";
+      if (reviewOverall) reviewOverall.textContent = report.overall_result;
+      renderReviewList(reviewImprovedList, report.improved_points, "这次改动效果不明显。");
+      renderReviewList(reviewIssueList, report.remaining_issues, "暂时没有明显遗留问题。");
+      if (reviewScoreList) {
+        const labelMap = {
+          improved: "已改善",
+          unchanged: "变化不明显",
+          needs_work: "还可优化"
+        };
+        reviewScoreList.innerHTML = (report.comparison_dimensions || []).map((item) => (
+          `<div><b>${escapeHtml(item.dimension)}：</b>${escapeHtml(labelMap[item.result] || item.result)} · ${escapeHtml(item.summary)}</div>`
+        )).join("");
+      }
+      if (reviewNext) reviewNext.textContent = report.next_recommendation || "如果想继续优化，可以告诉 AI 你不想换什么。";
+      syncRecordButtons(document.getElementById("review-screen"));
+    }
+
+    async function uploadAndReviewOutfit(file) {
+      if (!validateImageFile(file)) return;
+      if (!currentOutfitSession.imageId) {
+        showToast("请先完成一次「这身怎么改」，再上传试穿图复评。");
+        startUploadTask("outfit");
+        return;
+      }
+
+      showScreen("review-screen");
+      setReviewLoading(file);
+      showToast("试穿图上传中...");
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const uploaded = await requestJson("/upload", {
+          method: "POST",
+          body: formData
+        }, 20000);
+
+        currentReviewSession.reviewedImageId = uploaded.image_id;
+        currentReviewSession.reviewedImage = uploaded.image_url;
+        currentReviewSession.originalImageId = currentOutfitSession.imageId;
+        currentReviewSession.originalImage = currentOutfitSession.imageUrl;
+        currentReviewSession.planId = (getMainOutfitPlan() && getMainOutfitPlan().plan_id) || "";
+        setContainedBackground(reviewActualPhoto, uploaded.image_url);
+        showToast("AI 正在对比复评...");
+
+        const report = await requestJson("/review-outfit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            original_image_id: currentOutfitSession.imageId,
+            reviewed_image_id: uploaded.image_id,
+            plan_id: currentReviewSession.planId,
+            free_text_feedback: currentReviewSession.freeTextFeedback || ""
+          })
+        });
+
+        renderReviewReport(report);
+        showToast("复评报告已生成");
+      } catch (error) {
+        showToast(error.message || "复评失败，请稍后再试");
+        if (reviewReportTitle) reviewReportTitle.textContent = "复评失败";
+        if (reviewOverall) reviewOverall.textContent = "请确认后端服务已启动，或换一张 jpg、png、webp 图片再试。";
+      } finally {
+        if (reviewUploadButton) {
+          reviewUploadButton.disabled = false;
+          reviewUploadButton.textContent = "+ 上传试穿图";
+        }
+      }
+    }
+
+    function setConfirmLoading(file) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      setElementBackground(confirmItemPhoto, previewUrl);
+      confirmItemName.textContent = "正在识别这件单品...";
+      confirmItemSummary.textContent = "图片上传中，AI 稍后会提取颜色、版型、长度和适合场景。";
+      renderChips(confirmItemTags, ["上传中"], true);
+      setGenerateBusy(true, "等待识别结果...");
+    }
+
+    function renderAnalyzedItem(data) {
+      const item = data.item;
+      currentSession.imageId = data.image_id;
+      currentSession.analyzedItem = item;
+      const occasions = uniqueKnownValues(item.occasion_tags || []);
+      const styles = uniqueKnownValues(item.style_tags || []);
+      const summaryParts = [];
+      const colorPattern = joinKnown([item.primary_color, item.pattern]);
+      const shapeText = joinKnown([item.rise, item.silhouette, item.length]);
+
+      if (colorPattern) summaryParts.push(colorPattern);
+      if (shapeText) summaryParts.push(shapeText);
+      if (occasions.length) summaryParts.push(`适合${occasions.join(" / ")}`);
+      if (styles.length) summaryParts.push(`风格偏${styles.join(" / ")}`);
+
+      setElementBackground(confirmItemPhoto, currentSession.imageUrl);
+      confirmItemName.textContent = isKnownValue(item.name) ? item.name : "识别到的单品";
+      confirmItemSummary.textContent = summaryParts.length
+        ? `${summaryParts.join("，")}。`
+        : "已识别到这件单品，部分细节不够清晰，可以继续确认或重新上传。";
+      renderChips(
+        confirmItemTags,
+        uniqueKnownValues([
+          item.primary_color,
+          item.pattern,
+          item.silhouette,
+          item.rise,
+          item.length,
+          ...(item.style_tags || []),
+          ...(item.occasion_tags || [])
+        ]),
+        true
+      );
+      setGenerateBusy(false);
+    }
+
+    function getActiveChipText(container, fallback) {
+      const active = container && container.querySelector(".chip.active");
+      return active ? active.textContent.trim() : fallback;
+    }
+
+    function appendUnique(list, value) {
+      if (!value || list.includes(value)) return;
+      list.push(value);
+    }
+
+    function updateItemSessionStateFromText(text) {
+      const state = currentSession.sessionState;
+      const value = (text || "").trim();
+      if (!value) return state;
+      state.user_notes = value;
+      if (value.includes("不想穿高跟") || value.includes("不穿高跟") || value.includes("不要高跟")) {
+        appendUnique(state.comfort_constraints, "不穿高跟鞋");
+      }
+      if (value.includes("只有短上衣") || value.includes("只要短上衣") || value.includes("短上衣")) {
+        appendUnique(state.available_items, "短上衣");
+        appendUnique(state.style_constraints, "优先搭配短上衣");
+      }
+      if (value.includes("没有")) {
+        appendUnique(state.unavailable_items, value);
+      }
+      return state;
+    }
+
+    function getStrategyPrefix(strategy, index) {
+      const prefixes = {
+        safe: "A",
+        recommended: "B",
+        expressive: "C"
+      };
+      return prefixes[strategy] || String.fromCharCode(65 + index);
+    }
+
+    function renderRecommendationCard(recommendation, fixedItem, index) {
+      const imageClasses = ["look-one", "look-two", "look-three"];
+      const prefix = getStrategyPrefix(recommendation.strategy, index);
+      const fixedName = fixedItem.name || "已固定单品";
+      const thumbImage = resolveMediaUrl(currentSession.imageUrl || recommendation.image_url);
+      const hasGeneratedImage = recommendation.image_url && recommendation.image_url.includes("/uploads/generated-");
+      const lookImage = resolveMediaUrl(hasGeneratedImage ? recommendation.image_url : currentSession.imageUrl);
+      const imageStateClass = hasGeneratedImage ? "" : "item-anchor generating";
+      const spinnerHtml = hasGeneratedImage ? "" : '<span class="image-spinner" aria-hidden="true"></span>';
+      const tags = recommendation.tags || [];
+      const items = recommendation.items || [];
+      const listHtml = items.map((item) => `
+                <div class="list-row"><b>${escapeHtml(item.type)}</b><span>${escapeHtml(item.description)}</span></div>`).join("");
+      const tagsHtml = tags.map((tag) => `<span class="style-tag">${escapeHtml(tag)}</span>`).join("");
+
+      return `
+          <article class="outfit-card" data-plan-id="${escapeAttribute(recommendation.plan_id)}">
+            <div class="fixed-strip">
+              <div class="thumb" style="background-image:url('${escapeAttribute(thumbImage)}')"></div>
+              <div>
+                <strong>固定单品</strong>
+                <span>${escapeHtml(fixedName)}</span>
+              </div>
+            </div>
+            <div class="look-image ${imageStateClass} ${imageClasses[index] || ""}" data-plan-image="${escapeAttribute(recommendation.plan_id)}" style="background-image:linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.12)), url('${escapeAttribute(lookImage)}')" role="img" aria-label="${escapeAttribute(recommendation.title)}搭配方案参考">
+              ${spinnerHtml}
+              <span class="look-badge">${escapeHtml(prefix)} · ${escapeHtml(recommendation.strategy_label)}</span>
+              <span class="look-caption">${escapeHtml(recommendation.title)}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">
+                <h3>${escapeHtml(recommendation.title)}</h3>
+                <span class="tagline">${escapeHtml(recommendation.occasion_summary)}</span>
+              </div>
+              <div class="style-tags">
+                ${tagsHtml}
+              </div>
+              <div class="list">
+${listHtml}
+              </div>
+              <p class="reason">${escapeHtml(recommendation.reason)}</p>
+            </div>
+            <div class="card-actions">
+              <button class="action" data-record-action="favorite" data-record-scope="item" data-plan-id="${escapeAttribute(recommendation.plan_id)}">♡ 收藏</button>
+              <button class="action accept" data-record-action="accepted" data-record-scope="item" data-plan-id="${escapeAttribute(recommendation.plan_id)}" data-memory>✓ 采纳</button>
+              <button class="action" data-replace>↻ 换一个</button>
+            </div>
+          </article>`;
+    }
+
+    function renderRecommendations(data) {
+      currentSession.sessionId = data.session_id;
+      currentSession.recommendations = data.recommendations || [];
+      currentSession.fixedItem = data.fixed_item || currentSession.analyzedItem || {};
+      const fixedItem = data.fixed_item || currentSession.analyzedItem || {};
+      const constraints = data.user_constraints || {};
+      const resultLockText = document.querySelector(".result-lock span");
+
+      if (resultLockText) {
+        resultLockText.textContent = `${fixedItem.name || "已固定单品"} · ${constraints.occasion || currentSession.occasion} · ${constraints.desired_style || currentSession.desiredStyle}`;
+      }
+
+      if (carousel) {
+        carousel.innerHTML = currentSession.recommendations.map((recommendation, index) => (
+          renderRecommendationCard(recommendation, fixedItem, index)
+        )).join("");
+        carousel.scrollLeft = 0;
+        syncRecordButtons(carousel);
+      }
+
+      if (cardCount) {
+        cardCount.textContent = `1 / ${currentSession.recommendations.length || 3}`;
+      }
+    }
+
+    function updateRecommendationImage(planId, imageUrl, status) {
+      const plan = (currentSession.recommendations || []).find((item) => item.plan_id === planId);
+      const imageBox = document.querySelector(`[data-plan-image="${CSS.escape(planId)}"]`);
+      if (plan && imageUrl) {
+        plan.image_url = imageUrl;
+      }
+      if (!imageBox) return;
+      imageBox.classList.remove("generating");
+      imageBox.querySelectorAll(".image-spinner").forEach((item) => item.remove());
+      if (status === "generated" && imageUrl) {
+        imageBox.classList.remove("item-anchor", "image-failed");
+        imageBox.style.backgroundImage = `linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.12)), url('${escapeAttribute(resolveMediaUrl(imageUrl))}')`;
+      } else {
+        imageBox.classList.add("image-failed");
+      }
+    }
+
+    async function generateRecommendationImages(data) {
+      const fixedItem = data.fixed_item || currentSession.fixedItem || currentSession.analyzedItem || {};
+      const plans = data.recommendations || [];
+      for (const plan of plans) {
+        try {
+          const result = await requestJson("/recommendation-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: data.session_id || currentSession.sessionId || "",
+              fixed_item: fixedItem,
+              recommendation: plan
+            })
+          }, 180000);
+          updateRecommendationImage(plan.plan_id, result.image_url, result.image_status);
+        } catch (error) {
+          updateRecommendationImage(plan.plan_id, "", "failed");
+          showToast(error.message || "图片生成失败，先看文字方案");
+        }
+      }
+    }
+
+    function triggerItemUpload() {
+      if (!itemFileInput) return;
+      if (homePromptInput && homePromptInput.value.trim()) {
+        currentSession.freeTextConstraints = homePromptInput.value.trim();
+      }
+      itemFileInput.value = "";
+      itemFileInput.click();
+    }
+
+    async function uploadAndAnalyzeItem(file) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        showToast("请选择 jpg、png 或 webp 图片");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast("图片不能超过 10 MB");
+        return;
+      }
+
+      showScreen("confirm-screen");
+      setUploadBusy(true);
+      setConfirmLoading(file);
+      showToast("图片上传中...");
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const uploaded = await requestJson("/upload", {
+          method: "POST",
+          body: formData
+        }, 20000);
+
+        currentSession.imageId = uploaded.image_id;
+        currentSession.imageUrl = uploaded.image_url;
+        setElementBackground(confirmItemPhoto, uploaded.image_url);
+        confirmItemSummary.textContent = "图片上传成功，AI 正在分析单品属性...";
+        showToast("AI 正在识别单品...");
+
+        const analyzed = await requestJson("/analyze-item", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image_id: uploaded.image_id })
+        }, 60000);
+
+        renderAnalyzedItem(analyzed);
+        if (currentSession.freeTextConstraints) {
+          itemConstraints.value = currentSession.freeTextConstraints;
+        }
+        showToast("AI 识别完成");
+      } catch (error) {
+        showToast(error.message || "上传或识别失败");
+        confirmItemName.textContent = "识别失败";
+        confirmItemSummary.textContent = "请确认后端服务已启动，或换一张 jpg、png、webp 图片再试。";
+        renderChips(confirmItemTags, ["待重新上传"], true);
+        setGenerateBusy(true, "等待识别结果...");
+      } finally {
+        setUploadBusy(false);
+      }
+    }
+
+    async function generateItemRecommendations() {
+      if (!currentSession.imageId || !currentSession.analyzedItem) {
+        showToast("请先上传并识别一件单品");
+        startUploadTask("item");
+        return;
+      }
+
+      currentSession.occasion = getActiveChipText(occasionGroup, "不限");
+      currentSession.desiredStyle = getActiveChipText(styleGroup, "AI 推荐");
+      currentSession.freeTextConstraints = itemConstraints.value.trim();
+      setGenerateBusy(true, "AI 正在搭配...");
+
+      try {
+        const data = await requestJson("/recommend-item", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_id: currentSession.imageId,
+            occasion: currentSession.occasion,
+            desired_style: currentSession.desiredStyle,
+            free_text_constraints: currentSession.freeTextConstraints,
+            fixed_item: currentSession.analyzedItem,
+            session_state: updateItemSessionStateFromText(currentSession.freeTextConstraints)
+          })
+        }, 60000);
+
+        renderRecommendations(data);
+        showScreen("result-screen");
+        showToast("已生成 3 套搭配方案");
+        generateRecommendationImages(data);
+      } catch (error) {
+        showToast(error.message || "生成搭配失败");
+      } finally {
+        setGenerateBusy(false);
+      }
+    }
+
+    function showScreen(id) {
+      screens.forEach((screen) => {
+        screen.classList.toggle("active", screen.id === id);
+      });
+
+      navItems.forEach((item) => {
+        const target = item.dataset.screen;
+        const active =
+          (id === "home-screen" && target === "home-screen") ||
+          (id === "confirm-screen" && target === "home-screen") ||
+          (id === "result-screen" && target === "home-screen") ||
+          (id === "diagnosis-screen" && target === "home-screen") ||
+          (id === "review-screen" && target === "home-screen") ||
+          (id === "records-screen" && target === "records-screen") ||
+          (id === "profile-screen" && target === "profile-screen");
+        item.classList.toggle("active", active);
+      });
+
+      const activeScreen = document.getElementById(id);
+      const content = activeScreen && activeScreen.querySelector(".content");
+      if (content) content.scrollTop = 0;
+      if (id === "records-screen") renderRecords();
+      if (id === "review-screen") prepareReviewScreen();
+      memorySheet.classList.remove("show");
+      originalModal.classList.remove("show");
+      originalModal.setAttribute("aria-hidden", "true");
+    }
+
+    document.addEventListener("click", (event) => {
+      const uploadButton = event.target.closest("[data-upload-item]");
+      const outfitUploadButton = event.target.closest("[data-upload-outfit]");
+      const startTaskButton = event.target.closest("[data-start-task]");
+      const openCameraButton = event.target.closest("[data-open-camera]");
+      const openGalleryButton = event.target.closest("[data-open-gallery]");
+      const uploadTextButton = event.target.closest("[data-upload-text-submit]");
+      const generateItemButton = event.target.closest("[data-generate-item]");
+      const originalPreviewButton = event.target.closest("[data-original-preview]");
+      const closeOriginalButton = event.target.closest("[data-close-original]");
+      const recordActionButton = event.target.closest("[data-record-action]");
+      const recordFilterButton = event.target.closest("[data-record-filter]");
+      const screenButton = event.target.closest("[data-screen]");
+      const toastButton = event.target.closest("[data-toast]");
+      const memoryButton = event.target.closest("[data-memory]");
+      const closeSheet = event.target.closest("[data-close-sheet]");
+      const replaceButton = event.target.closest("[data-replace]");
+      const scrollButton = event.target.closest("[data-scroll-target]");
+      const chip = event.target.closest(".chip");
+
+      if (uploadButton) {
+        event.preventDefault();
+        startUploadTask("item", uploadButton.dataset.uploadNote || "");
+        return;
+      }
+
+      if (outfitUploadButton) {
+        event.preventDefault();
+        startUploadTask("outfit", outfitUploadButton.dataset.outfitNote || "");
+        return;
+      }
+
+      if (startTaskButton) {
+        event.preventDefault();
+        startUploadTask(startTaskButton.dataset.startTask, startTaskButton.dataset.taskNote || "");
+        return;
+      }
+
+      if (openCameraButton) {
+        event.preventDefault();
+        openPendingFilePicker("camera");
+        return;
+      }
+
+      if (openGalleryButton) {
+        event.preventDefault();
+        openPendingFilePicker("gallery");
+        return;
+      }
+
+      if (uploadTextButton) {
+        event.preventDefault();
+        submitUploadText();
+        return;
+      }
+
+      if (originalPreviewButton) {
+        event.preventDefault();
+        originalModal.classList.add("show");
+        originalModal.setAttribute("aria-hidden", "false");
+        return;
+      }
+
+      if (closeOriginalButton || event.target === originalModal) {
+        event.preventDefault();
+        originalModal.classList.remove("show");
+        originalModal.setAttribute("aria-hidden", "true");
+        return;
+      }
+
+      if (recordFilterButton) {
+        event.preventDefault();
+        activeRecordFilter = recordFilterButton.dataset.recordFilter;
+        recordTabs.forEach((item) => item.classList.toggle("active", item === recordFilterButton));
+        renderRecords();
+        return;
+      }
+
+      if (recordActionButton) {
+        event.preventDefault();
+        const record = saveRecord(buildRecordFromButton(recordActionButton));
+        if (!record) {
+          showToast("请先生成方案，再收藏或采纳");
+          return;
+        }
+        if (record.action === "accepted") {
+          pendingMemoryRecord = record;
+        }
+        showToast(record.action === "favorite" ? "已收藏到搭配记录" : "已采纳并入库");
+        if (recordActionButton.hasAttribute("data-memory")) {
+          memorySheet.classList.add("show");
+        }
+        return;
+      }
+
+      if (generateItemButton) {
+        event.preventDefault();
+        generateItemRecommendations();
+        return;
+      }
+
+      if (screenButton) {
+        showScreen(screenButton.dataset.screen);
+      }
+
+      if (toastButton) {
+        showToast(toastButton.dataset.toast);
+      }
+
+      if (memoryButton) {
+        memorySheet.classList.add("show");
+      }
+
+      if (closeSheet) {
+        if (closeSheet.dataset.toast && pendingMemoryRecord) {
+          saveMemoryPreference(pendingMemoryRecord);
+        }
+        pendingMemoryRecord = null;
+        memorySheet.classList.remove("show");
+      }
+
+      if (replaceButton) {
+        showToast("先告诉我哪里不满意，再换得更准");
+        document.getElementById("replace-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      if (scrollButton) {
+        const target = document.getElementById(scrollButton.dataset.scrollTarget);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      if (chip && !chip.closest(".record-tabs")) {
+        const group = chip.closest("[data-choice-group]");
+        if (group) {
+          group.querySelectorAll(".chip").forEach((item) => item.classList.remove("active"));
+        }
+        chip.classList.toggle("active");
+      }
+    });
+
+    if (carousel) {
+      carousel.addEventListener("scroll", () => {
+        const cards = Array.from(carousel.querySelectorAll(".outfit-card"));
+        if (!cards.length) return;
+        const index = Math.round(carousel.scrollLeft / (cards[0].offsetWidth + 14)) + 1;
+        cardCount.textContent = `${Math.min(Math.max(index, 1), cards.length)} / ${cards.length}`;
+      }, { passive: true });
+    }
+
+    if (itemFileInput) {
+      itemFileInput.addEventListener("change", () => {
+        const file = itemFileInput.files && itemFileInput.files[0];
+        if (file) uploadAndAnalyzeItem(file);
+      });
+    }
+
+    if (outfitFileInput) {
+      outfitFileInput.addEventListener("change", () => {
+        const file = outfitFileInput.files && outfitFileInput.files[0];
+        if (file) uploadAndAnalyzeOutfit(file);
+      });
+    }
+
+    if (reviewFileInput) {
+      reviewFileInput.addEventListener("change", () => {
+        const file = reviewFileInput.files && reviewFileInput.files[0];
+        if (file) uploadAndReviewOutfit(file);
+      });
+    }
+
+    document.querySelectorAll(".before-after").forEach((slider) => {
+      const range = slider.querySelector(".ba-range");
+      if (!range) return;
+
+      const updateSplit = () => {
+        slider.style.setProperty("--split", `${range.value}%`);
+      };
+
+      range.addEventListener("input", updateSplit);
+      updateSplit();
+    });
+  </script>
+</body>
+</html>

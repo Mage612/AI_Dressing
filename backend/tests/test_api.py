@@ -1,0 +1,231 @@
+from pathlib import Path
+from urllib.parse import urlparse
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app import settings
+from app.settings import MAX_UPLOAD_BYTES
+from app.api import upload as upload_api
+from app.services import image_service
+
+
+client = TestClient(app)
+
+PNG_BYTES = (
+    b"\x89PNG\r\n\x1a\n"
+    b"\x00\x00\x00\rIHDR"
+    b"\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00"
+    b"\x90wS\xde"
+    b"\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
+@pytest.fixture(autouse=True)
+def use_temp_upload_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(upload_api, "UPLOAD_DIR", tmp_path)
+    monkeypatch.setattr(image_service, "UPLOAD_DIR", tmp_path)
+    monkeypatch.setattr(settings, "AI_MODE", "mock")
+    yield tmp_path
+
+
+def _cleanup_uploaded_file(image_url: str) -> None:
+    filename = Path(urlparse(image_url).path).name
+    output_path = upload_api.UPLOAD_DIR / filename
+    if output_path.exists():
+        output_path.unlink()
+
+
+def _upload_test_image() -> dict:
+    response = client.post(
+        "/api/upload",
+        files={"file": ("pants.png", PNG_BYTES, "image/png")},
+    )
+
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_health_returns_ok() -> None:
+    response = client.get("/api/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_upload_valid_image_success() -> None:
+    response = client.post(
+        "/api/upload",
+        files={"file": ("裤子.png", PNG_BYTES, "image/png")},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["image_id"]
+    assert data["image_url"].endswith(".png")
+
+    filename = Path(urlparse(data["image_url"]).path).name
+    assert filename.startswith(data["image_id"])
+    assert (upload_api.UPLOAD_DIR / filename).exists()
+
+    _cleanup_uploaded_file(data["image_url"])
+
+
+def test_upload_invalid_file_type_fails() -> None:
+    response = client.post(
+        "/api/upload",
+        files={"file": ("notes.txt", b"not an image", "text/plain")},
+    )
+
+    assert response.status_code == 415
+
+
+def test_upload_too_large_fails() -> None:
+    too_large_png = PNG_BYTES + b"0" * (MAX_UPLOAD_BYTES + 1)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("large.png", too_large_png, "image/png")},
+    )
+
+    assert response.status_code == 413
+
+
+def test_analyze_item_returns_schema() -> None:
+    uploaded = _upload_test_image()
+
+    try:
+        response = client.post(
+            "/api/analyze-item",
+            json={"image_id": uploaded["image_id"]},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["image_id"] == uploaded["image_id"]
+        assert data["confidence"] == 0.93
+        assert data["item"]["category"] == "trousers"
+        assert data["item"]["name"] == "深灰色高腰阔腿西装裤"
+        assert data["item"]["style_tags"] == ["简约", "通勤"]
+    finally:
+        _cleanup_uploaded_file(uploaded["image_url"])
+
+
+def test_recommend_item_returns_three_recommendations() -> None:
+    uploaded = _upload_test_image()
+
+    try:
+        response = client.post(
+            "/api/recommend-item",
+            json={
+                "image_id": uploaded["image_id"],
+                "occasion": "通勤",
+                "desired_style": "AI 推荐",
+                "free_text_constraints": "不穿高跟鞋",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["session_id"]
+        assert data["user_constraints"]["occasion"] == "通勤"
+        assert len(data["recommendations"]) == 3
+        assert {item["strategy"] for item in data["recommendations"]} == {
+            "safe",
+            "recommended",
+            "expressive",
+        }
+        assert all(item["items"] for item in data["recommendations"])
+        assert all(item["image_url"] for item in data["recommendations"])
+    finally:
+        _cleanup_uploaded_file(uploaded["image_url"])
+
+
+def test_analyze_item_invalid_image_id_fails() -> None:
+    response = client.post("/api/analyze-item", json={"image_id": "not-a-valid-image-id"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid image_id."
+
+
+def test_analyze_outfit_returns_schema() -> None:
+    uploaded = _upload_test_image()
+
+    try:
+        response = client.post(
+            "/api/analyze-outfit",
+            json={"image_id": uploaded["image_id"]},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["overall_summary"]
+        assert data["strengths"]
+        assert data["main_issues"]
+        assert data["diagnosis_dimensions"]
+        assert data["keep_items"]
+    finally:
+        _cleanup_uploaded_file(uploaded["image_url"])
+
+
+def test_refine_outfit_returns_three_plan_types() -> None:
+    uploaded = _upload_test_image()
+
+    try:
+        response = client.post(
+            "/api/refine-outfit",
+            json={
+                "image_id": uploaded["image_id"],
+                "conversation_state": {
+                    "locked_items": ["上衣"],
+                    "rejected_items": ["高跟鞋"],
+                    "user_notes": "想更显高",
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["plans"]) == 3
+        assert {plan["plan_type"] for plan in data["plans"]} == {
+            "recommended",
+            "minimal",
+            "expressive",
+        }
+        assert all(plan["change_budget"] for plan in data["plans"])
+        assert all("from" in plan["changes"][0] for plan in data["plans"])
+    finally:
+        _cleanup_uploaded_file(uploaded["image_url"])
+
+
+def test_review_outfit_returns_comparison_report() -> None:
+    original = _upload_test_image()
+    reviewed = _upload_test_image()
+
+    try:
+        response = client.post(
+            "/api/review-outfit",
+            json={
+                "original_image_id": original["image_id"],
+                "reviewed_image_id": reviewed["image_id"],
+                "plan_id": "outfit-recommended-001",
+                "free_text_feedback": "按推荐调整后拍的试穿图",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["review_id"]
+        assert data["original_image_id"] == original["image_id"]
+        assert data["reviewed_image_id"] == reviewed["image_id"]
+        assert data["overall_result"]
+        assert data["improved_points"]
+        assert data["remaining_issues"]
+        assert data["comparison_dimensions"]
+        assert data["next_recommendation"]
+    finally:
+        _cleanup_uploaded_file(original["image_url"])
+        _cleanup_uploaded_file(reviewed["image_url"])
