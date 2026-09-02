@@ -1,5 +1,6 @@
 .env
 backend/.env
+src/supabase/
 backend/uploads/
 backend/ai_runs.jsonl
 backend/debug_artifacts/
