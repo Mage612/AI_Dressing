@@ -1,0 +1,12 @@
+.git
+.git.broken-*/
+.agents/
+.env
+backend/.env
+backend/uploads/
+backend/ai_runs.jsonl
+backend/debug_artifacts/
+文件存档/
+__pycache__/
+.pytest_cache/
+*.pyc

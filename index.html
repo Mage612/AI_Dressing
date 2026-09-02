@@ -3174,10 +3174,11 @@
       if (queryApi) {
         localStorage.setItem("yijianjia_api_base_url", queryApi.replace(/\/$/, ""));
       }
+      const isLocalStaticPreview = ["127.0.0.1:5500", "localhost:5500"].includes(window.location.host);
       return (
         window.AIDRESSING_API_BASE_URL ||
         localStorage.getItem("yijianjia_api_base_url") ||
-        "http://127.0.0.1:8000/api"
+        (isLocalStaticPreview ? "http://127.0.0.1:8000/api" : `${window.location.origin}/api`)
       );
     }
 
