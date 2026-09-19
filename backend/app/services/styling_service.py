@@ -590,6 +590,8 @@ def _build_item_image_prompt(
         "A reference image is attached. Use the attached image as the source of truth for the fixed anchor item.\n"
         "Preserve the exact visible garment category, cut, seam structure, neckline/waistline, hem length, drape, material texture, color, pattern, hardware, and styling details of the anchor item.\n"
         "Do not reinterpret the anchor item from the text summary if it conflicts with the image; the image wins.\n"
+        "If a person is visible in the reference, preserve the same apparent wearer presentation, styling cues, and overall body framing; never switch to a different gender presentation.\n"
+        "If no person is clearly visible, use a neutral adult model presentation and do not invent strongly gendered styling cues.\n"
         "Do not change the anchor item's gender expression or make it more masculine/feminine than the reference.\n"
         "Only add or adjust the complementary outfit pieces described below.\n"
         if has_reference_image

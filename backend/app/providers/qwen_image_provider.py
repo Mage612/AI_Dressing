@@ -87,7 +87,7 @@ class QwenImageProvider:
             raise QwenImageError("Qwen Image network request failed.") from exc
         except httpx.HTTPStatusError as exc:
             error_type = f"http_{exc.response.status_code}"
-            raise QwenImageError(f"Qwen Image HTTP error: {exc.response.status_code}") from exc
+            raise QwenImageError(self._http_error_message(exc, "image request")) from exc
         except (KeyError, ValueError, TypeError) as exc:
             error_type = "response_shape"
             raise QwenImageError("Qwen Image response missing image URL.") from exc
@@ -164,7 +164,7 @@ class QwenImageProvider:
         except httpx.RequestError as exc:
             raise QwenImageError("Qwen Image task submission request failed.") from exc
         except httpx.HTTPStatusError as exc:
-            raise QwenImageError(f"Qwen Image task submission HTTP error: {exc.response.status_code}") from exc
+            raise QwenImageError(self._http_error_message(exc, "task submission")) from exc
 
     def _start_multimodal_image_task(
         self,
@@ -214,9 +214,7 @@ class QwenImageProvider:
         except httpx.RequestError as exc:
             raise QwenImageError("Qwen Image reference task submission request failed.") from exc
         except httpx.HTTPStatusError as exc:
-            raise QwenImageError(
-                f"Qwen Image reference task submission HTTP error: {exc.response.status_code}"
-            ) from exc
+            raise QwenImageError(self._http_error_message(exc, "reference task submission")) from exc
 
     def poll_image_task(self, task_id: str) -> Optional[str]:
         try:
@@ -243,7 +241,7 @@ class QwenImageProvider:
         except httpx.RequestError as exc:
             raise QwenImageError("Qwen Image task polling request failed.") from exc
         except httpx.HTTPStatusError as exc:
-            raise QwenImageError(f"Qwen Image task polling HTTP error: {exc.response.status_code}") from exc
+            raise QwenImageError(self._http_error_message(exc, "task polling")) from exc
         except (KeyError, ValueError, TypeError) as exc:
             raise QwenImageError("Qwen Image task response missing image URL.") from exc
 
@@ -251,8 +249,8 @@ class QwenImageProvider:
     def _image_endpoint(base_url: str) -> str:
         base = base_url.rstrip("/")
         if base.endswith("/compatible-mode/v1"):
-            return base[: -len("/compatible-mode/v1")] + "/api/v1/services/aigc/multimodal-generation/generation"
-        return base + "/services/aigc/multimodal-generation/generation"
+            return base[: -len("/compatible-mode/v1")] + "/api/v1/services/aigc/image-generation/generation"
+        return base + "/services/aigc/image-generation/generation"
 
     @staticmethod
     def _async_image_endpoint(base_url: str) -> str:
@@ -313,6 +311,29 @@ class QwenImageProvider:
             if url:
                 return str(url)
         raise ValueError("No image URL in response.")
+
+    @staticmethod
+    def _http_error_message(exc: httpx.HTTPStatusError, operation: str) -> str:
+        response = exc.response
+        provider_code = ""
+        provider_message = ""
+        request_id = response.headers.get("x-request-id", "")
+        try:
+            payload = response.json()
+            provider_code = str(payload.get("code") or payload.get("error", {}).get("code") or "")
+            provider_message = str(
+                payload.get("message")
+                or payload.get("error", {}).get("message")
+                or ""
+            )
+            request_id = str(payload.get("request_id") or request_id)
+        except (TypeError, ValueError):
+            provider_message = response.text.strip()[:240]
+
+        details = ": ".join(part for part in (provider_code, provider_message) if part)
+        suffix = f" ({details})" if details else ""
+        request_suffix = f" [request_id={request_id}]" if request_id else ""
+        return f"Qwen Image {operation} HTTP {response.status_code}{suffix}{request_suffix}"
 
     @staticmethod
     def _download_image(image_url: str) -> str:

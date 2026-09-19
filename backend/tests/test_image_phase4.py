@@ -9,7 +9,7 @@ def test_qwen_image_endpoint_uses_dashscope_native_generation_path() -> None:
         "https://example.com/compatible-mode/v1"
     )
 
-    assert endpoint == "https://example.com/api/v1/services/aigc/multimodal-generation/generation"
+    assert endpoint == "https://example.com/api/v1/services/aigc/image-generation/generation"
 
 
 def test_qwen_image_async_endpoint_uses_dashscope_native_task_path() -> None:
@@ -188,3 +188,4 @@ def test_item_image_prompt_prioritizes_reference_image() -> None:
     assert "the image wins" in prompt
     assert "seam structure" in prompt
     assert "material texture" in prompt
+    assert "never switch to a different gender presentation" in prompt

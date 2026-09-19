@@ -4206,7 +4206,12 @@ ${listHtml}
         try {
           const result = await requestJson(`/recommendation-image/${encodeURIComponent(jobId)}`, {}, 20000);
           updateRecommendationImage(planId, result.image_url, result.image_status);
-          if (result.image_status !== "pending") return;
+          if (result.image_status !== "pending") {
+            if (result.image_status === "failed") {
+              showToast(result.error || "图片生成失败，先看文字方案");
+            }
+            return;
+          }
         } catch (error) {
           if (attempt >= 47) {
             updateRecommendationImage(planId, "", "failed");
@@ -4237,6 +4242,9 @@ ${listHtml}
             continue;
           }
           updateRecommendationImage(plan.plan_id, result.image_url, result.image_status);
+          if (result.image_status === "failed") {
+            showToast(result.error || "图片生成失败，先看文字方案");
+          }
         } catch (error) {
           updateRecommendationImage(plan.plan_id, "", "failed");
           showToast(error.message || "图片生成失败，先看文字方案");
