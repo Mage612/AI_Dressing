@@ -1,7 +1,23 @@
+import pytest
+
+from app import settings
 from app.providers.qwen_image_provider import QwenImageProvider
 from app.schemas.item import ClothingItem, ItemRecommendation, RecommendationItem
 from app.services.styling_service import _build_item_image_prompt
 from app.services import image_generation_jobs
+
+
+@pytest.fixture(autouse=True)
+def isolated_image_generation_state(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(
+        image_generation_jobs,
+        "STATE_PATH",
+        tmp_path / "image-generation-state.json",
+    )
+    monkeypatch.setattr(settings, "IMAGE_VISITOR_DAILY_LIMIT", 2)
+    monkeypatch.setattr(settings, "IMAGE_GLOBAL_DAILY_LIMIT", 60)
+    image_generation_jobs._jobs.clear()
+    image_generation_jobs._jobs_by_cache_key.clear()
 
 
 def test_qwen_image_endpoint_uses_dashscope_native_generation_path() -> None:
@@ -98,6 +114,80 @@ def test_image_generation_job_passes_reference_image(monkeypatch, tmp_path) -> N
 
     assert job.external_task_id == "task-1"
     assert captured["reference_image_path"] == reference_image
+
+
+def test_image_generation_cache_reuses_completed_result(monkeypatch) -> None:
+    starts = []
+
+    def fake_start_image_task(self, **kwargs):
+        starts.append(kwargs)
+        return "task-1"
+
+    monkeypatch.setattr(QwenImageProvider, "start_image_task", fake_start_image_task)
+    monkeypatch.setattr(
+        QwenImageProvider,
+        "poll_image_task",
+        lambda self, task_id: "https://example.com/generated.png",
+    )
+
+    first = image_generation_jobs.start_image_generation_job(
+        plan_id="plan-1",
+        fallback_image_url="/uploads/fallback.png",
+        prompt="prompt",
+        task_type="test",
+        prompt_version="v0.1",
+        session_id="session-1",
+        cache_key="same-plan",
+        visitor_id="visitor-1",
+    )
+    image_generation_jobs.get_image_generation_job(first.job_id)
+    second = image_generation_jobs.start_image_generation_job(
+        plan_id="plan-1",
+        fallback_image_url="/uploads/fallback.png",
+        prompt="prompt",
+        task_type="test",
+        prompt_version="v0.1",
+        session_id="session-2",
+        cache_key="same-plan",
+        visitor_id="visitor-1",
+    )
+
+    assert len(starts) == 1
+    assert second.status == "generated"
+    assert second.cached is True
+    assert second.image_url == "https://example.com/generated.png"
+
+
+def test_image_generation_enforces_visitor_daily_limit(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "IMAGE_VISITOR_DAILY_LIMIT", 1)
+    monkeypatch.setattr(
+        QwenImageProvider,
+        "start_image_task",
+        lambda self, **kwargs: "task-1",
+    )
+
+    image_generation_jobs.start_image_generation_job(
+        plan_id="plan-1",
+        fallback_image_url="/uploads/fallback.png",
+        prompt="prompt",
+        task_type="test",
+        prompt_version="v0.1",
+        session_id="session-1",
+        cache_key="plan-1",
+        visitor_id="visitor-1",
+    )
+
+    with pytest.raises(image_generation_jobs.ImageGenerationLimitError):
+        image_generation_jobs.start_image_generation_job(
+            plan_id="plan-2",
+            fallback_image_url="/uploads/fallback.png",
+            prompt="another prompt",
+            task_type="test",
+            prompt_version="v0.1",
+            session_id="session-1",
+            cache_key="plan-2",
+            visitor_id="visitor-1",
+        )
 
 
 def test_qwen_image_message_content_includes_reference_image(tmp_path) -> None:

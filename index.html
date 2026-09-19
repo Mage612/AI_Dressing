@@ -1237,6 +1237,10 @@
       content: "图片生成中...";
     }
 
+    .look-image.awaiting-generation::before {
+      content: "文字方案已就绪，选中后再生成效果图";
+    }
+
     .look-image.generating .image-spinner {
       position: absolute;
       z-index: 3;
@@ -1415,6 +1419,16 @@
     .action.accept {
       color: #fff;
       background: var(--accent);
+    }
+
+    .action.generate {
+      color: #fff;
+      background: var(--wine);
+    }
+
+    .action:disabled {
+      cursor: default;
+      opacity: 0.68;
     }
 
     .action.is-favorited {
@@ -3186,6 +3200,18 @@
 
     const API_BASE_URL = getApiBaseUrl();
     const STORAGE_KEY = "yijianjia_records_v1";
+    const VISITOR_STORAGE_KEY = "yijianjia_visitor_id_v1";
+
+    function getVisitorId() {
+      let visitorId = localStorage.getItem(VISITOR_STORAGE_KEY);
+      if (!visitorId) {
+        visitorId = window.crypto && window.crypto.randomUUID
+          ? window.crypto.randomUUID()
+          : `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        localStorage.setItem(VISITOR_STORAGE_KEY, visitorId);
+      }
+      return visitorId;
+    }
     const currentSession = {
       imageId: null,
       imageUrl: null,
@@ -4113,9 +4139,19 @@
       const fixedName = fixedItem.name || "已固定单品";
       const thumbImage = resolveMediaUrl(currentSession.imageUrl || recommendation.image_url);
       const hasGeneratedImage = recommendation.image_url && recommendation.image_url.includes("/uploads/generated-");
+      const autoGenerate = recommendation.strategy === "recommended";
       const lookImage = resolveMediaUrl(hasGeneratedImage ? recommendation.image_url : currentSession.imageUrl);
-      const imageStateClass = hasGeneratedImage ? "" : "item-anchor generating";
-      const spinnerHtml = hasGeneratedImage ? "" : '<span class="image-spinner" aria-hidden="true"></span>';
+      const imageStateClass = hasGeneratedImage
+        ? ""
+        : `item-anchor ${autoGenerate ? "generating" : "awaiting-generation"}`;
+      const spinnerHtml = !hasGeneratedImage && autoGenerate
+        ? '<span class="image-spinner" aria-hidden="true"></span>'
+        : "";
+      const generationAction = hasGeneratedImage
+        ? '<button class="action" data-plan-generation-action disabled>✓ 已生成</button>'
+        : autoGenerate
+          ? '<button class="action" data-plan-generation-action disabled>生成中</button>'
+          : `<button class="action generate" data-plan-generation-action data-generate-look="${escapeAttribute(recommendation.plan_id)}">生成效果图</button>`;
       const tags = recommendation.tags || [];
       const items = recommendation.items || [];
       const listHtml = items.map((item) => `
@@ -4152,7 +4188,7 @@ ${listHtml}
             <div class="card-actions">
               <button class="action" data-record-action="favorite" data-record-scope="item" data-plan-id="${escapeAttribute(recommendation.plan_id)}">♡ 收藏</button>
               <button class="action accept" data-record-action="accepted" data-record-scope="item" data-plan-id="${escapeAttribute(recommendation.plan_id)}" data-memory>✓ 采纳</button>
-              <button class="action" data-replace>↻ 换一个</button>
+              ${generationAction}
             </div>
           </article>`;
     }
@@ -4185,18 +4221,46 @@ ${listHtml}
     function updateRecommendationImage(planId, imageUrl, status) {
       const plan = (currentSession.recommendations || []).find((item) => item.plan_id === planId);
       const imageBox = document.querySelector(`[data-plan-image="${CSS.escape(planId)}"]`);
+      const card = imageBox && imageBox.closest(".outfit-card");
+      const generationAction = card && card.querySelector("[data-plan-generation-action]");
       if (plan && imageUrl) {
         plan.image_url = imageUrl;
       }
       if (!imageBox) return;
-      if (status === "pending") return;
+      if (plan) plan.image_status = status;
+      if (status === "pending") {
+        imageBox.classList.remove("awaiting-generation", "image-failed");
+        imageBox.classList.add("generating");
+        if (!imageBox.querySelector(".image-spinner")) {
+          imageBox.insertAdjacentHTML("afterbegin", '<span class="image-spinner" aria-hidden="true"></span>');
+        }
+        if (generationAction) {
+          generationAction.disabled = true;
+          generationAction.classList.remove("generate");
+          generationAction.removeAttribute("data-generate-look");
+          generationAction.textContent = "生成中";
+        }
+        return;
+      }
       imageBox.classList.remove("generating");
       imageBox.querySelectorAll(".image-spinner").forEach((item) => item.remove());
       if (status === "generated" && imageUrl) {
-        imageBox.classList.remove("item-anchor", "image-failed");
+        imageBox.classList.remove("item-anchor", "awaiting-generation", "image-failed");
         imageBox.style.backgroundImage = `linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.12)), url('${escapeAttribute(resolveMediaUrl(imageUrl))}')`;
+        if (generationAction) {
+          generationAction.disabled = true;
+          generationAction.classList.remove("generate");
+          generationAction.removeAttribute("data-generate-look");
+          generationAction.textContent = "✓ 已生成";
+        }
       } else {
         imageBox.classList.add("image-failed");
+        if (generationAction) {
+          generationAction.disabled = false;
+          generationAction.classList.add("generate");
+          generationAction.dataset.generateLook = planId;
+          generationAction.textContent = "重试生成";
+        }
       }
     }
 
@@ -4221,35 +4285,43 @@ ${listHtml}
       updateRecommendationImage(planId, "", "failed");
     }
 
-    async function generateRecommendationImages(data) {
-      const fixedItem = data.fixed_item || currentSession.fixedItem || currentSession.analyzedItem || {};
-      const plans = data.recommendations || [];
-      for (const plan of plans) {
-        try {
-          const result = await requestJson("/recommendation-image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              session_id: data.session_id || currentSession.sessionId || "",
-              image_id: currentSession.imageId || data.image_id || "",
-              fixed_item: fixedItem,
-              recommendation: plan
-            })
-          }, 180000);
-          if (result.image_status === "pending" && result.job_id) {
-            updateRecommendationImage(plan.plan_id, result.image_url, "pending");
-            pollRecommendationImage(plan.plan_id, result.job_id);
-            continue;
-          }
-          updateRecommendationImage(plan.plan_id, result.image_url, result.image_status);
-          if (result.image_status === "failed") {
-            showToast(result.error || "图片生成失败，先看文字方案");
-          }
-        } catch (error) {
-          updateRecommendationImage(plan.plan_id, "", "failed");
-          showToast(error.message || "图片生成失败，先看文字方案");
+    async function generateRecommendationImage(planId, automatic = false) {
+      const plan = (currentSession.recommendations || []).find((item) => item.plan_id === planId);
+      if (!plan || plan.image_status === "pending" || plan.image_status === "generated") return;
+      updateRecommendationImage(planId, "", "pending");
+      if (!automatic) showToast("正在生成这套效果图...");
+
+      try {
+        const result = await requestJson("/recommendation-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: currentSession.sessionId || "",
+            image_id: currentSession.imageId || "",
+            fixed_item: currentSession.fixedItem || currentSession.analyzedItem || {},
+            recommendation: plan,
+            visitor_id: getVisitorId()
+          })
+        }, 180000);
+        updateRecommendationImage(planId, result.image_url, result.image_status);
+        if (result.image_status === "pending" && result.job_id) {
+          pollRecommendationImage(planId, result.job_id);
+          return;
         }
+        if (result.image_status === "generated") {
+          showToast(result.cached ? "已读取之前生成的效果图" : "效果图已生成");
+        } else if (result.image_status === "failed") {
+          showToast(result.error || "图片生成失败，文字方案仍可使用");
+        }
+      } catch (error) {
+        updateRecommendationImage(planId, "", "failed");
+        showToast(error.message || "图片生成失败，文字方案仍可使用");
       }
+    }
+
+    function generateRecommendationImages(data) {
+      const recommended = (data.recommendations || []).find((plan) => plan.strategy === "recommended");
+      if (recommended) generateRecommendationImage(recommended.plan_id, true);
     }
 
     function triggerItemUpload() {
@@ -4395,6 +4467,7 @@ ${listHtml}
       const memoryButton = event.target.closest("[data-memory]");
       const closeSheet = event.target.closest("[data-close-sheet]");
       const replaceButton = event.target.closest("[data-replace]");
+      const generateLookButton = event.target.closest("[data-generate-look]");
       const scrollButton = event.target.closest("[data-scroll-target]");
       const chip = event.target.closest(".chip");
 
@@ -4470,6 +4543,12 @@ ${listHtml}
         if (recordActionButton.hasAttribute("data-memory")) {
           memorySheet.classList.add("show");
         }
+        return;
+      }
+
+      if (generateLookButton) {
+        event.preventDefault();
+        generateRecommendationImage(generateLookButton.dataset.generateLook);
         return;
       }
 

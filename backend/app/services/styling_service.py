@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Optional, Protocol
@@ -28,6 +29,7 @@ from app.schemas.outfit import (
 )
 from app.services.image_service import get_uploaded_image_path, get_uploaded_image_url_path
 from app.services.image_generation_jobs import (
+    ImageGenerationLimitError,
     get_image_generation_job,
     start_image_generation_job,
 )
@@ -385,6 +387,7 @@ def generate_recommendation_image(
     reference_image_path = (
         get_uploaded_image_path(request.image_id) if request.image_id else None
     )
+    cache_key = _image_generation_cache_key(request, reference_image_path)
     job = start_image_generation_job(
         plan_id=request.recommendation.plan_id,
         fallback_image_url=request.recommendation.image_url,
@@ -398,6 +401,8 @@ def generate_recommendation_image(
         session_id=request.session_id,
         recommendation_id=request.recommendation.plan_id,
         reference_image_path=reference_image_path,
+        cache_key=cache_key,
+        visitor_id=request.visitor_id or request.session_id,
     )
 
     return GenerateRecommendationImageResponse(
@@ -406,6 +411,8 @@ def generate_recommendation_image(
         image_status=job.status,
         error=job.error,
         job_id=job.job_id,
+        cached=job.cached,
+        remaining_daily_generations=job.remaining_daily_generations,
     )
 
 
@@ -419,7 +426,30 @@ def get_recommendation_image(job_id: str) -> GenerateRecommendationImageResponse
         image_status=job.status,
         error=job.error,
         job_id=job.job_id,
+        cached=job.cached,
+        remaining_daily_generations=job.remaining_daily_generations,
     )
+
+
+def _image_generation_cache_key(
+    request: GenerateRecommendationImageRequest,
+    reference_image_path: Optional[Path],
+) -> str:
+    payload = {
+        "model": settings.QWEN_IMAGE_MODEL,
+        "size": settings.QWEN_IMAGE_SIZE,
+        "fixed_item": request.fixed_item.dict(),
+        "recommendation": request.recommendation.dict(
+            exclude={"image_url", "constraint_check"}
+        ),
+    }
+    digest = hashlib.sha256()
+    if reference_image_path is not None:
+        digest.update(reference_image_path.read_bytes())
+    digest.update(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    )
+    return digest.hexdigest()
 
 
 def smoke_test_deepseek() -> dict[str, Any]:

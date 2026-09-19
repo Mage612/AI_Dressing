@@ -72,6 +72,7 @@ class GenerateRecommendationImageRequest(BaseModel):
     recommendation: ItemRecommendation
     fixed_item: ClothingItem
     image_id: Optional[str] = None
+    visitor_id: Optional[str] = Field(default=None, max_length=100)
 
 
 class GenerateRecommendationImageResponse(BaseModel):
@@ -80,3 +81,5 @@ class GenerateRecommendationImageResponse(BaseModel):
     image_status: Literal["pending", "generated", "failed"]
     error: Optional[str] = ""
     job_id: Optional[str] = ""
+    cached: bool = False
+    remaining_daily_generations: Optional[int] = None

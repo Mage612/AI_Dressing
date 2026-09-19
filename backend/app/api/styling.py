@@ -20,6 +20,7 @@ from app.services import styling_service, vision_service
 from app.services.image_service import ImageNotFoundError, InvalidImageIdError
 from app.services.vision_service import VisionServiceError
 from app.services.styling_service import StylingServiceError
+from app.services.image_generation_jobs import ImageGenerationLimitError
 
 
 router = APIRouter(tags=["styling"])
@@ -75,6 +76,11 @@ def generate_recommendation_image(
         return styling_service.generate_recommendation_image(request)
     except (InvalidImageIdError, ImageNotFoundError) as exc:
         _raise_api_error(exc)
+    except ImageGenerationLimitError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        ) from exc
     except StylingServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
