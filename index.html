@@ -1273,6 +1273,15 @@
       pointer-events: none;
     }
 
+    .look-image.generated-preview {
+      cursor: zoom-in;
+    }
+
+    .look-image.generated-preview:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: -3px;
+    }
+
     .look-badge {
       position: absolute;
       z-index: 2;
@@ -2341,6 +2350,55 @@
       background: #eee8df;
     }
 
+    .generated-image-modal {
+      position: absolute;
+      z-index: 44;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      background: rgba(22, 21, 18, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .generated-image-modal.show {
+      display: flex;
+    }
+
+    .generated-image-modal-card {
+      width: min(100%, 430px);
+      max-height: calc(100% - 28px);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 60px rgba(22, 21, 18, 0.32);
+    }
+
+    .generated-image-modal-card img {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      object-fit: contain;
+      background: #ded8cf;
+    }
+
+    .generated-image-modal-actions {
+      padding: 12px 14px 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .generated-image-modal-actions button {
+      width: 100%;
+      height: 44px;
+      color: #fff;
+      background: var(--accent);
+      border-radius: var(--radius);
+      font-weight: 700;
+    }
+
     .sheet-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -3132,6 +3190,19 @@
       </div>
     </div>
 
+    <div class="generated-image-modal" id="generated-image-modal" aria-hidden="true">
+      <div class="generated-image-modal-card" role="dialog" aria-modal="true" aria-labelledby="generated-image-modal-title">
+        <div class="original-modal-head">
+          <strong id="generated-image-modal-title">搭配效果图</strong>
+          <button data-close-generated-image aria-label="关闭效果图预览">×</button>
+        </div>
+        <img id="generated-image-preview" alt="AI 生成的完整穿搭效果图">
+        <div class="generated-image-modal-actions">
+          <button id="download-generated-image" type="button">下载保存到本地</button>
+        </div>
+      </div>
+    </div>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </main>
 
@@ -3162,6 +3233,10 @@
     const homePromptInput = document.querySelector("#home-screen .say-box input");
     const diagnosisPhotoImg = document.getElementById("diagnosis-photo-img");
     const originalModal = document.getElementById("original-modal");
+    const generatedImageModal = document.getElementById("generated-image-modal");
+    const generatedImagePreview = document.getElementById("generated-image-preview");
+    const generatedImageModalTitle = document.getElementById("generated-image-modal-title");
+    const downloadGeneratedImageButton = document.getElementById("download-generated-image");
     const diagnosisSummary = document.getElementById("diagnosis-summary");
     const diagnosisGrid = document.getElementById("diagnosis-grid");
     const coreProblemText = document.getElementById("core-problem-text");
@@ -3378,6 +3453,56 @@
       if (/^(https?:|blob:|data:)/.test(imageUrl)) return imageUrl;
       const backendOrigin = API_BASE_URL.replace(/\/api$/, "");
       return `${backendOrigin}${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
+    }
+
+    function getGeneratedPlan(planId) {
+      return (currentSession.recommendations || []).find((item) => (
+        item.plan_id === planId && item.image_status === "generated" && item.image_url
+      ));
+    }
+
+    function closeGeneratedImagePreview() {
+      generatedImageModal.classList.remove("show");
+      generatedImageModal.setAttribute("aria-hidden", "true");
+      generatedImagePreview.removeAttribute("src");
+      delete generatedImageModal.dataset.planId;
+    }
+
+    function openGeneratedImagePreview(planId) {
+      const plan = getGeneratedPlan(planId);
+      if (!plan) return;
+      generatedImagePreview.src = resolveMediaUrl(plan.image_url);
+      generatedImagePreview.alt = `${plan.title || "搭配方案"}完整穿搭效果图`;
+      generatedImageModalTitle.textContent = plan.title || "搭配效果图";
+      generatedImageModal.dataset.planId = planId;
+      generatedImageModal.classList.add("show");
+      generatedImageModal.setAttribute("aria-hidden", "false");
+      downloadGeneratedImageButton.focus();
+    }
+
+    async function downloadGeneratedImage(planId) {
+      const plan = getGeneratedPlan(planId);
+      if (!plan) {
+        showToast("这张效果图还没有生成");
+        return;
+      }
+      const safeTitle = String(plan.title || "搭配效果图").replace(/[\\/:*?"<>|]/g, "-");
+      try {
+        const response = await fetch(resolveMediaUrl(plan.image_url));
+        if (!response.ok) throw new Error("download failed");
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `衣渐佳-${safeTitle}.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        showToast("图片已开始下载");
+      } catch (error) {
+        showToast("下载失败，请稍后重试");
+      }
     }
 
     function setElementBackground(element, imageUrl, withOverlay = true) {
@@ -4148,7 +4273,7 @@
         ? '<span class="image-spinner" aria-hidden="true"></span>'
         : "";
       const generationAction = hasGeneratedImage
-        ? '<button class="action" data-plan-generation-action disabled>✓ 已生成</button>'
+        ? `<button class="action" data-plan-generation-action data-open-generated-image="${escapeAttribute(recommendation.plan_id)}">查看 / 保存</button>`
         : autoGenerate
           ? '<button class="action" data-plan-generation-action disabled>生成中</button>'
           : `<button class="action generate" data-plan-generation-action data-generate-look="${escapeAttribute(recommendation.plan_id)}">生成效果图</button>`;
@@ -4167,7 +4292,7 @@
                 <span>${escapeHtml(fixedName)}</span>
               </div>
             </div>
-            <div class="look-image ${imageStateClass} ${imageClasses[index] || ""}" data-plan-image="${escapeAttribute(recommendation.plan_id)}" style="background-image:linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.12)), url('${escapeAttribute(lookImage)}')" role="img" aria-label="${escapeAttribute(recommendation.title)}搭配方案参考">
+            <div class="look-image ${hasGeneratedImage ? "generated-preview" : ""} ${imageStateClass} ${imageClasses[index] || ""}" data-plan-image="${escapeAttribute(recommendation.plan_id)}" ${hasGeneratedImage ? `data-open-generated-image="${escapeAttribute(recommendation.plan_id)}" tabindex="0"` : ""} style="background-image:linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.12)), url('${escapeAttribute(lookImage)}')" role="${hasGeneratedImage ? "button" : "img"}" aria-label="${escapeAttribute(recommendation.title)}${hasGeneratedImage ? "搭配效果图，点击查看大图并保存" : "搭配方案参考"}">
               ${spinnerHtml}
               <span class="look-badge">${escapeHtml(prefix)} · ${escapeHtml(recommendation.strategy_label)}</span>
               <span class="look-caption">${escapeHtml(recommendation.title)}</span>
@@ -4246,12 +4371,18 @@ ${listHtml}
       imageBox.querySelectorAll(".image-spinner").forEach((item) => item.remove());
       if (status === "generated" && imageUrl) {
         imageBox.classList.remove("item-anchor", "awaiting-generation", "image-failed");
+        imageBox.classList.add("generated-preview");
+        imageBox.dataset.openGeneratedImage = planId;
+        imageBox.tabIndex = 0;
+        imageBox.setAttribute("role", "button");
+        imageBox.setAttribute("aria-label", `${plan && plan.title ? plan.title : "搭配"}效果图，点击查看大图并保存`);
         imageBox.style.backgroundImage = `linear-gradient(180deg, transparent 56%, rgba(20, 19, 16, 0.12)), url('${escapeAttribute(resolveMediaUrl(imageUrl))}')`;
         if (generationAction) {
-          generationAction.disabled = true;
+          generationAction.disabled = false;
           generationAction.classList.remove("generate");
           generationAction.removeAttribute("data-generate-look");
-          generationAction.textContent = "✓ 已生成";
+          generationAction.dataset.openGeneratedImage = planId;
+          generationAction.textContent = "查看 / 保存";
         }
       } else {
         imageBox.classList.add("image-failed");
@@ -4448,6 +4579,7 @@ ${listHtml}
       memorySheet.classList.remove("show");
       originalModal.classList.remove("show");
       originalModal.setAttribute("aria-hidden", "true");
+      closeGeneratedImagePreview();
     }
 
     document.addEventListener("click", (event) => {
@@ -4460,6 +4592,8 @@ ${listHtml}
       const generateItemButton = event.target.closest("[data-generate-item]");
       const originalPreviewButton = event.target.closest("[data-original-preview]");
       const closeOriginalButton = event.target.closest("[data-close-original]");
+      const openGeneratedImageButton = event.target.closest("[data-open-generated-image]");
+      const closeGeneratedImageButton = event.target.closest("[data-close-generated-image]");
       const recordActionButton = event.target.closest("[data-record-action]");
       const recordFilterButton = event.target.closest("[data-record-filter]");
       const screenButton = event.target.closest("[data-screen]");
@@ -4470,6 +4604,18 @@ ${listHtml}
       const generateLookButton = event.target.closest("[data-generate-look]");
       const scrollButton = event.target.closest("[data-scroll-target]");
       const chip = event.target.closest(".chip");
+
+      if (openGeneratedImageButton) {
+        event.preventDefault();
+        openGeneratedImagePreview(openGeneratedImageButton.dataset.openGeneratedImage);
+        return;
+      }
+
+      if (closeGeneratedImageButton || event.target === generatedImageModal) {
+        event.preventDefault();
+        closeGeneratedImagePreview();
+        return;
+      }
 
       if (uploadButton) {
         event.preventDefault();
@@ -4595,6 +4741,21 @@ ${listHtml}
         }
         chip.classList.toggle("active");
       }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && generatedImageModal.classList.contains("show")) {
+        closeGeneratedImagePreview();
+        return;
+      }
+      if ((event.key === "Enter" || event.key === " ") && event.target.matches("[data-open-generated-image]")) {
+        event.preventDefault();
+        openGeneratedImagePreview(event.target.dataset.openGeneratedImage);
+      }
+    });
+
+    downloadGeneratedImageButton.addEventListener("click", () => {
+      downloadGeneratedImage(generatedImageModal.dataset.planId || "");
     });
 
     if (carousel) {

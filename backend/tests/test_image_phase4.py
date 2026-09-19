@@ -279,3 +279,10 @@ def test_item_image_prompt_prioritizes_reference_image() -> None:
     assert "seam structure" in prompt
     assert "material texture" in prompt
     assert "never switch to a different gender presentation" in prompt
+    assert "Show exactly one realistic adult fashion model" in prompt
+    assert "Do not create an infographic" in prompt
+    assert "outfit breakdown" in prompt
+    assert "Do not add any cards, panels" in prompt
+    assert "Do not add any new letters, numbers, words" in prompt
+    assert "preserve only the authentic graphics" in prompt
+    assert "complete outfit clearly visible from head to toe" in prompt
