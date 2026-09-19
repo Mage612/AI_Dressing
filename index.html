@@ -1204,9 +1204,11 @@
 
     .look-image {
       position: relative;
-      aspect-ratio: 5 / 4;
-      background-size: cover;
+      aspect-ratio: 9 / 16;
+      background-color: #f3efe7;
+      background-size: contain;
       background-position: center;
+      background-repeat: no-repeat;
     }
 
     .look-image.item-anchor {
@@ -4187,6 +4189,7 @@ ${listHtml}
         plan.image_url = imageUrl;
       }
       if (!imageBox) return;
+      if (status === "pending") return;
       imageBox.classList.remove("generating");
       imageBox.querySelectorAll(".image-spinner").forEach((item) => item.remove());
       if (status === "generated" && imageUrl) {
@@ -4195,6 +4198,22 @@ ${listHtml}
       } else {
         imageBox.classList.add("image-failed");
       }
+    }
+
+    async function pollRecommendationImage(planId, jobId) {
+      for (let attempt = 0; attempt < 48; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2500));
+        try {
+          const result = await requestJson(`/recommendation-image/${encodeURIComponent(jobId)}`, {}, 20000);
+          updateRecommendationImage(planId, result.image_url, result.image_status);
+          if (result.image_status !== "pending") return;
+        } catch (error) {
+          if (attempt >= 47) {
+            updateRecommendationImage(planId, "", "failed");
+          }
+        }
+      }
+      updateRecommendationImage(planId, "", "failed");
     }
 
     async function generateRecommendationImages(data) {
@@ -4207,10 +4226,16 @@ ${listHtml}
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               session_id: data.session_id || currentSession.sessionId || "",
+              image_id: currentSession.imageId || data.image_id || "",
               fixed_item: fixedItem,
               recommendation: plan
             })
           }, 180000);
+          if (result.image_status === "pending" && result.job_id) {
+            updateRecommendationImage(plan.plan_id, result.image_url, "pending");
+            pollRecommendationImage(plan.plan_id, result.job_id);
+            continue;
+          }
           updateRecommendationImage(plan.plan_id, result.image_url, result.image_status);
         } catch (error) {
           updateRecommendationImage(plan.plan_id, "", "failed");

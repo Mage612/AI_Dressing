@@ -1,7 +1,7 @@
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 from app.schemas.upload import UploadResponse
 from app.settings import MAX_UPLOAD_BYTES, UPLOAD_DIR
@@ -15,7 +15,7 @@ router = APIRouter(tags=["upload"])
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_image(request: Request, file: UploadFile = File(...)) -> UploadResponse:
+async def upload_image(file: UploadFile = File(...)) -> UploadResponse:
     content = await file.read(MAX_UPLOAD_BYTES + 1)
 
     try:
@@ -42,5 +42,5 @@ async def upload_image(request: Request, file: UploadFile = File(...)) -> Upload
     output_path = Path(UPLOAD_DIR) / stored_filename
     output_path.write_bytes(content)
 
-    image_url = str(request.url_for("uploads", path=stored_filename))
+    image_url = f"/uploads/{stored_filename}"
     return UploadResponse(success=True, image_id=image_id, image_url=image_url)

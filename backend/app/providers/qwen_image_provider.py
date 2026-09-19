@@ -1,3 +1,4 @@
+import base64
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,6 +33,7 @@ class QwenImageProvider:
         prompt_version: str,
         session_id: str,
         recommendation_id: Optional[str] = None,
+        reference_image_path: Optional[Path] = None,
     ) -> str:
         run_id = new_run_id()
         started_at = datetime.now(timezone.utc)
@@ -49,7 +51,17 @@ class QwenImageProvider:
                 },
                 json={
                     "model": self.model,
-                    "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
+                    "input": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": self._message_content(
+                                    prompt=prompt,
+                                    reference_image_path=reference_image_path,
+                                ),
+                            }
+                        ]
+                    },
                     "parameters": {
                         "size": settings.QWEN_IMAGE_SIZE,
                         "n": 1,
@@ -96,7 +108,10 @@ class QwenImageProvider:
                 input_tokens=usage.get("input_tokens") or usage.get("prompt_tokens"),
                 output_tokens=usage.get("output_tokens") or usage.get("completion_tokens"),
                 total_tokens=usage.get("total_tokens"),
-                metadata={"image_size": settings.QWEN_IMAGE_SIZE},
+                metadata={
+                    "image_size": settings.QWEN_IMAGE_SIZE,
+                    "has_reference_image": reference_image_path is not None,
+                },
             )
             if settings.STYLING_DEBUG:
                 print(
@@ -105,12 +120,178 @@ class QwenImageProvider:
                     f"prompt_version={prompt_version} latency_ms={latency_ms} status={status}"
                 )
 
+    def start_image_task(
+        self,
+        *,
+        prompt: str,
+        reference_image_path: Optional[Path] = None,
+    ) -> str:
+        if reference_image_path is not None:
+            return self._start_multimodal_image_task(
+                prompt=prompt,
+                reference_image_path=reference_image_path,
+            )
+
+        try:
+            response = httpx.post(
+                self._async_image_endpoint(settings.DASHSCOPE_BASE_URL),
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "X-DashScope-Async": "enable",
+                },
+                json={
+                    "model": settings.QWEN_IMAGE_ASYNC_MODEL,
+                    "input": {"prompt": prompt},
+                    "parameters": {
+                        "size": settings.QWEN_IMAGE_SIZE,
+                        "n": 1,
+                        "prompt_extend": True,
+                        "watermark": False,
+                    },
+                },
+                timeout=min(self.timeout, 25),
+                trust_env=False,
+            )
+            response.raise_for_status()
+            data = response.json()
+            task_id = data.get("output", {}).get("task_id") or data.get("task_id")
+            if not task_id:
+                raise QwenImageError("Qwen Image task response missing task ID.")
+            return str(task_id)
+        except httpx.TimeoutException as exc:
+            raise QwenImageError("Qwen Image task submission timed out.") from exc
+        except httpx.RequestError as exc:
+            raise QwenImageError("Qwen Image task submission request failed.") from exc
+        except httpx.HTTPStatusError as exc:
+            raise QwenImageError(f"Qwen Image task submission HTTP error: {exc.response.status_code}") from exc
+
+    def _start_multimodal_image_task(
+        self,
+        *,
+        prompt: str,
+        reference_image_path: Path,
+    ) -> str:
+        try:
+            response = httpx.post(
+                self.endpoint,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "X-DashScope-Async": "enable",
+                },
+                json={
+                    "model": self.model,
+                    "input": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": self._message_content(
+                                    prompt=prompt,
+                                    reference_image_path=reference_image_path,
+                                ),
+                            }
+                        ]
+                    },
+                    "parameters": {
+                        "size": settings.QWEN_IMAGE_SIZE,
+                        "n": 1,
+                        "prompt_extend": False,
+                        "watermark": False,
+                    },
+                },
+                timeout=min(self.timeout, 25),
+                trust_env=False,
+            )
+            response.raise_for_status()
+            data = response.json()
+            task_id = data.get("output", {}).get("task_id") or data.get("task_id")
+            if not task_id:
+                raise QwenImageError("Qwen Image reference task response missing task ID.")
+            return str(task_id)
+        except httpx.TimeoutException as exc:
+            raise QwenImageError("Qwen Image reference task submission timed out.") from exc
+        except httpx.RequestError as exc:
+            raise QwenImageError("Qwen Image reference task submission request failed.") from exc
+        except httpx.HTTPStatusError as exc:
+            raise QwenImageError(
+                f"Qwen Image reference task submission HTTP error: {exc.response.status_code}"
+            ) from exc
+
+    def poll_image_task(self, task_id: str) -> Optional[str]:
+        try:
+            response = httpx.get(
+                self._task_endpoint(settings.DASHSCOPE_BASE_URL, task_id),
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=min(settings.MODEL_TIMEOUT_SECONDS, 25),
+                trust_env=False,
+            )
+            response.raise_for_status()
+            data = response.json()
+            output = data.get("output", {}) or {}
+            task_status = str(output.get("task_status") or data.get("task_status") or "").upper()
+            if task_status in {"PENDING", "RUNNING", "SUSPENDED", ""}:
+                return None
+            if task_status != "SUCCEEDED":
+                message = output.get("message") or data.get("message") or task_status
+                raise QwenImageError(f"Qwen Image task failed: {message}")
+
+            image_url = self._extract_image_url(data)
+            return self._download_image(image_url)
+        except httpx.TimeoutException as exc:
+            raise QwenImageError("Qwen Image task polling timed out.") from exc
+        except httpx.RequestError as exc:
+            raise QwenImageError("Qwen Image task polling request failed.") from exc
+        except httpx.HTTPStatusError as exc:
+            raise QwenImageError(f"Qwen Image task polling HTTP error: {exc.response.status_code}") from exc
+        except (KeyError, ValueError, TypeError) as exc:
+            raise QwenImageError("Qwen Image task response missing image URL.") from exc
+
     @staticmethod
     def _image_endpoint(base_url: str) -> str:
         base = base_url.rstrip("/")
         if base.endswith("/compatible-mode/v1"):
             return base[: -len("/compatible-mode/v1")] + "/api/v1/services/aigc/multimodal-generation/generation"
         return base + "/services/aigc/multimodal-generation/generation"
+
+    @staticmethod
+    def _async_image_endpoint(base_url: str) -> str:
+        base = base_url.rstrip("/")
+        if base.endswith("/compatible-mode/v1"):
+            return base[: -len("/compatible-mode/v1")] + "/api/v1/services/aigc/text2image/image-synthesis"
+        return base + "/services/aigc/text2image/image-synthesis"
+
+    @staticmethod
+    def _task_endpoint(base_url: str, task_id: str) -> str:
+        base = base_url.rstrip("/")
+        if base.endswith("/compatible-mode/v1"):
+            return base[: -len("/compatible-mode/v1")] + f"/api/v1/tasks/{task_id}"
+        return base + f"/tasks/{task_id}"
+
+    @classmethod
+    def _message_content(
+        cls,
+        *,
+        prompt: str,
+        reference_image_path: Optional[Path] = None,
+    ) -> list[dict[str, str]]:
+        content: list[dict[str, str]] = []
+        if reference_image_path is not None:
+            content.append({"image": cls._image_data_url(reference_image_path)})
+        content.append({"text": prompt})
+        return content
+
+    @staticmethod
+    def _image_data_url(image_path: Path) -> str:
+        suffix = image_path.suffix.lower().lstrip(".")
+        mime_type = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "webp": "image/webp",
+        }.get(suffix, "image/jpeg")
+        image_b64 = base64.b64encode(image_path.read_bytes()).decode("ascii")
+        return f"data:{mime_type};base64,{image_b64}"
 
     @staticmethod
     def _extract_image_url(data: dict[str, Any]) -> str:

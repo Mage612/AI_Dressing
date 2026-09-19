@@ -14,8 +14,7 @@ Required shape:
       "items": [{"type": "string", "description": "string"}],
       "reason": "string",
       "image_url": "string",
-      "image_instruction": "string",
-      "constraint_check": {"passed": true, "notes": ["string"]}
+      "image_instruction": "string"
     }
   ]
 }
@@ -28,4 +27,6 @@ Rules:
 - If the user says no high heels, footwear must be flat shoes, sneakers, loafers, Mary Janes without heel, or similar low/no-heel options.
 - Make the three plans meaningfully different in at least two dimensions.
 - Use placeholder image_url values. Do not call image generation.
+- Keep output short: 3 tags max, 4 items max, each description under 24 Chinese characters, each reason under 60 Chinese characters.
+- Do not include extra fields, explanations, notes, Markdown, or repeated constraint text.
 - Return JSON only. No Markdown.

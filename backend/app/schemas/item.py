@@ -71,10 +71,12 @@ class GenerateRecommendationImageRequest(BaseModel):
     session_id: str
     recommendation: ItemRecommendation
     fixed_item: ClothingItem
+    image_id: Optional[str] = None
 
 
 class GenerateRecommendationImageResponse(BaseModel):
     plan_id: str
     image_url: str
-    image_status: Literal["generated", "failed"]
+    image_status: Literal["pending", "generated", "failed"]
     error: Optional[str] = ""
+    job_id: Optional[str] = ""

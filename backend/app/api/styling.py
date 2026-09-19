@@ -73,9 +73,25 @@ def generate_recommendation_image(
 ) -> GenerateRecommendationImageResponse:
     try:
         return styling_service.generate_recommendation_image(request)
+    except (InvalidImageIdError, ImageNotFoundError) as exc:
+        _raise_api_error(exc)
     except StylingServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/recommendation-image/{job_id}",
+    response_model=GenerateRecommendationImageResponse,
+)
+def get_recommendation_image(job_id: str) -> GenerateRecommendationImageResponse:
+    try:
+        return styling_service.get_recommendation_image(job_id)
+    except StylingServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
 

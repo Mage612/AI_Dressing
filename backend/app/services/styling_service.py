@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 
 from app import settings
 from app.providers.deepseek_provider import DeepSeekError, DeepSeekProvider
-from app.providers.qwen_image_provider import QwenImageError, QwenImageProvider
 from app.schemas.item import (
+    ClothingItem,
     ItemRecommendation,
     GenerateRecommendationImageRequest,
     GenerateRecommendationImageResponse,
@@ -26,7 +26,11 @@ from app.schemas.outfit import (
     ReviewOutfitRequest,
     ReviewOutfitResponse,
 )
-from app.services.image_service import get_uploaded_image_url_path
+from app.services.image_service import get_uploaded_image_path, get_uploaded_image_url_path
+from app.services.image_generation_jobs import (
+    get_image_generation_job,
+    start_image_generation_job,
+)
 from app.services.styling_constraint_validator import (
     ConstraintValidationError,
     validate_item_recommendations,
@@ -74,13 +78,13 @@ class DeepSeekRefineOutput(BaseModel):
 class MockStylingService:
     def recommend_item(self, request: RecommendItemRequest) -> RecommendItemResponse:
         session_id = str(uuid4())
-        analyzed = analyze_item(request.image_id)
+        fixed_item, _vision_json = _item_context(request)
         constraints = UserConstraints(
             occasion=request.occasion,
             desired_style=request.desired_style,
             free_text_constraints=request.free_text_constraints or "",
         )
-        fixed_name = analyzed.item.name
+        fixed_name = fixed_item.name
         wants_short_top = _wants_short_top(
             request.free_text_constraints or "",
             _session_list(request.session_state, "available_items"),
@@ -145,13 +149,13 @@ class MockStylingService:
 
         validate_item_recommendations(
             recommendations,
-            fixed_item=analyzed.item,
+            fixed_item=fixed_item,
             unavailable_items=_session_list(request.session_state, "unavailable_items"),
             free_text_constraints=request.free_text_constraints or "",
         )
         return RecommendItemResponse(
             session_id=session_id,
-            fixed_item=analyzed.item,
+            fixed_item=fixed_item,
             user_constraints=constraints,
             recommendations=recommendations,
         )
@@ -245,8 +249,7 @@ class DeepSeekStylingService:
 
     def recommend_item(self, request: RecommendItemRequest) -> RecommendItemResponse:
         session_id = _session_id(request.session_state)
-        analyzed = analyze_item(request.image_id)
-        fixed_item = request.fixed_item or analyzed.item
+        fixed_item, vision_json = _item_context(request)
         constraints = UserConstraints(
             occasion=request.occasion,
             desired_style=request.desired_style,
@@ -258,7 +261,7 @@ class DeepSeekStylingService:
             task_type="recommend_item",
             response_model=DeepSeekItemOutput,
             system_prompt=_system_prompt(context.skill_yaml, context.knowledge_markdown),
-            user_prompt=_item_user_prompt(request, analyzed.dict(), state),
+            user_prompt=_item_user_prompt(request, vision_json, state),
             skill_version=context.skill_version,
             session_id=session_id,
             validator=lambda result: validate_item_recommendations(
@@ -379,26 +382,43 @@ def generate_recommendation_image(
             image_status="failed",
             error="AI_IMAGE_MODE is not live.",
         )
-    try:
-        image_url = QwenImageProvider().generate_image(
-            prompt=_build_item_image_prompt(request.recommendation, request.fixed_item.name),
-            task_type="item_outfit_image_generation",
-            prompt_version=settings.STYLING_PROMPT_VERSION,
-            session_id=request.session_id,
-            recommendation_id=request.recommendation.plan_id,
-        )
-    except QwenImageError as exc:
-        return GenerateRecommendationImageResponse(
-            plan_id=request.recommendation.plan_id,
-            image_url=request.recommendation.image_url,
-            image_status="failed",
-            error=str(exc),
-        )
+    reference_image_path = (
+        get_uploaded_image_path(request.image_id) if request.image_id else None
+    )
+    job = start_image_generation_job(
+        plan_id=request.recommendation.plan_id,
+        fallback_image_url=request.recommendation.image_url,
+        prompt=_build_item_image_prompt(
+            request.recommendation,
+            request.fixed_item,
+            has_reference_image=reference_image_path is not None,
+        ),
+        task_type="item_outfit_image_generation",
+        prompt_version=settings.STYLING_PROMPT_VERSION,
+        session_id=request.session_id,
+        recommendation_id=request.recommendation.plan_id,
+        reference_image_path=reference_image_path,
+    )
 
     return GenerateRecommendationImageResponse(
-        plan_id=request.recommendation.plan_id,
-        image_url=image_url,
-        image_status="generated",
+        plan_id=job.plan_id,
+        image_url=job.image_url,
+        image_status=job.status,
+        error=job.error,
+        job_id=job.job_id,
+    )
+
+
+def get_recommendation_image(job_id: str) -> GenerateRecommendationImageResponse:
+    job = get_image_generation_job(job_id)
+    if job is None:
+        raise StylingServiceError("Image generation job was not found.")
+    return GenerateRecommendationImageResponse(
+        plan_id=job.plan_id,
+        image_url=job.image_url,
+        image_status=job.status,
+        error=job.error,
+        job_id=job.job_id,
     )
 
 
@@ -429,15 +449,17 @@ def review_outfit(request: ReviewOutfitRequest) -> ReviewOutfitResponse:
 def _system_prompt(skill_yaml: str, knowledge_markdown: str) -> str:
     return (
         "You are the backend styling engine for AIDressing. "
-        "Follow the policy, skill, and knowledge exactly. Return JSON only.\n\n"
-        "A. System Policy\n"
-        "- Respect hard constraints over aesthetics.\n"
-        "- Do not output unsupported precise body judgments or aesthetic scores.\n"
-        "- If the outfit is already good, say so plainly.\n\n"
-        "B. Styling Skill\n"
-        f"{skill_yaml}\n\n"
-        "C. Styling Knowledge\n"
-        f"{knowledge_markdown}"
+        "Return exactly one compact JSON object and no Markdown.\n\n"
+        "Core policy:\n"
+        "- User hard constraints beat aesthetics.\n"
+        "- Keep fixed_item unchanged in every plan.\n"
+        "- Do not use unsupported body judgments, aesthetic scores, or absolute body rules.\n"
+        "- Prefer practical, wearable, low-change suggestions.\n"
+        "- If the outfit is already good, phrase issues as light optimizations.\n"
+        "- Keep all user-facing text in Simplified Chinese.\n"
+        "- Keep output concise: tags <= 3 per plan, items <= 5 per plan, "
+        "item descriptions <= 28 Chinese chars, reasons <= 80 Chinese chars, "
+        "image_instruction <= 80 Chinese chars."
     )
 
 
@@ -479,6 +501,34 @@ def _read_prompt(filename: str) -> str:
     return (PROMPT_DIR / filename).read_text(encoding="utf-8")
 
 
+def _item_context(request: RecommendItemRequest) -> tuple[ClothingItem, dict[str, Any]]:
+    if request.fixed_item is not None:
+        return request.fixed_item, {
+            "image_id": request.image_id,
+            "item": _model_to_dict(request.fixed_item),
+            "confidence": 1.0,
+        }
+
+    analyzed = analyze_item(request.image_id)
+    return analyzed.item, _analysis_to_dict(request.image_id, analyzed)
+
+
+def _model_to_dict(model: BaseModel) -> dict[str, Any]:
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+    return model.dict()
+
+
+def _analysis_to_dict(image_id: str, analyzed: Any) -> dict[str, Any]:
+    if hasattr(analyzed, "model_dump") or hasattr(analyzed, "dict"):
+        return _model_to_dict(analyzed)
+    return {
+        "image_id": getattr(analyzed, "image_id", image_id),
+        "item": _model_to_dict(analyzed.item),
+        "confidence": getattr(analyzed, "confidence", 1.0),
+    }
+
+
 def _session_id(state: Optional[dict[str, Any]]) -> str:
     if state and state.get("session_id"):
         return str(state["session_id"])
@@ -517,19 +567,49 @@ def _append_unique(values: list[str], value: str) -> None:
         values.append(value)
 
 
-def _build_item_image_prompt(recommendation: ItemRecommendation, fixed_item_name: str) -> str:
+def _build_item_image_prompt(
+    recommendation: ItemRecommendation,
+    fixed_item: ClothingItem,
+    has_reference_image: bool = False,
+) -> str:
     item_lines = "\n".join(f"- {item.type}: {item.description}" for item in recommendation.items)
+    anchor_lines = "\n".join(
+        [
+            f"- name: {fixed_item.name}",
+            f"- category: {fixed_item.category}",
+            f"- primary color: {fixed_item.primary_color}",
+            f"- pattern/texture: {fixed_item.pattern}",
+            f"- silhouette: {fixed_item.silhouette}",
+            f"- rise/waistline: {fixed_item.rise}",
+            f"- length: {fixed_item.length}",
+            f"- style tags: {', '.join(fixed_item.style_tags[:4])}",
+            f"- occasion tags: {', '.join(fixed_item.occasion_tags[:4])}",
+        ]
+    )
+    reference_policy = (
+        "A reference image is attached. Use the attached image as the source of truth for the fixed anchor item.\n"
+        "Preserve the exact visible garment category, cut, seam structure, neckline/waistline, hem length, drape, material texture, color, pattern, hardware, and styling details of the anchor item.\n"
+        "Do not reinterpret the anchor item from the text summary if it conflicts with the image; the image wins.\n"
+        "Do not change the anchor item's gender expression or make it more masculine/feminine than the reference.\n"
+        "Only add or adjust the complementary outfit pieces described below.\n"
+        if has_reference_image
+        else
+        "No reference image is attached. Follow the fixed anchor item structured description conservatively.\n"
+    )
     return (
         "Create a vertical full-body fashion outfit reference photo for a mobile styling app.\n"
         "The image must show a realistic adult fashion model wearing the described outfit.\n"
         "Do not create a question mark, punctuation mark, sculpture, logo, typography, poster, or text.\n"
         "No watermark. No Chinese characters. No floating symbols.\n"
-        "Do not change the fixed anchor item into another garment category.\n"
-        "Preserve the anchor item's visible garment type, main color, neckline/collar, sleeve length, length, fabric feel, and silhouette as closely as possible from the text description.\n"
+        f"{reference_policy}"
+        "The uploaded fixed anchor item is mandatory and must remain visually recognizable.\n"
+        "Do not change the fixed anchor item into another garment category, color family, pattern, length, waistline, or silhouette.\n"
+        "Preserve the anchor item's visible garment type, main color, pattern/texture, rise/waistline, length, fabric feel, and silhouette as closely as possible from the structured description.\n"
+        "Treat the fixed anchor item as the most important visual constraint, more important than styling creativity.\n"
         "If exact details are unknown, choose a conservative plain version instead of inventing decorations, prints, logos, or dramatic cuts.\n"
         "Use a clean lifestyle photography look, natural daylight, simple urban or studio background.\n"
         "The clothing must be the focus and must be clearly visible from head to toe.\n"
-        f"Fixed anchor item that must be included: {fixed_item_name}.\n"
+        f"Fixed anchor item structured description:\n{anchor_lines}\n"
         f"Outfit plan title: {recommendation.title}.\n"
         f"Occasion: {recommendation.occasion_summary}.\n"
         f"Items to wear:\n{item_lines}\n"

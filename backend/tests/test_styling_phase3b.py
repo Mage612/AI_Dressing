@@ -217,3 +217,23 @@ def test_mock_recommend_item_respects_short_top_constraint(monkeypatch) -> None:
     )
     assert "短" in text
     assert "高跟" not in item_text
+
+
+def test_mock_recommend_item_uses_provided_fixed_item_without_reanalyzing(monkeypatch) -> None:
+    from app.services import styling_service
+
+    def fail_analyze(image_id):
+        raise AssertionError("analyze_item should not be called when fixed_item is provided")
+
+    monkeypatch.setattr(styling_service, "analyze_item", fail_analyze)
+
+    response = MockStylingService().recommend_item(
+        styling_service.RecommendItemRequest(
+            image_id="image-1",
+            fixed_item=_fixed_item(),
+            free_text_constraints="no high heels",
+        )
+    )
+
+    assert response.fixed_item == _fixed_item()
+    assert len(response.recommendations) == 3

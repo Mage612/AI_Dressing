@@ -65,6 +65,7 @@ def test_upload_valid_image_success() -> None:
     data = response.json()
     assert data["success"] is True
     assert data["image_id"]
+    assert data["image_url"].startswith("/uploads/")
     assert data["image_url"].endswith(".png")
 
     filename = Path(urlparse(data["image_url"]).path).name

@@ -31,9 +31,9 @@ app.include_router(styling.router, prefix="/api")
 
 @app.get("/", include_in_schema=False)
 def serve_frontend() -> FileResponse:
-    return FileResponse(FRONTEND_INDEX)
+    return FileResponse(FRONTEND_INDEX, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/index.html", include_in_schema=False)
 def serve_frontend_index() -> FileResponse:
-    return FileResponse(FRONTEND_INDEX)
+    return FileResponse(FRONTEND_INDEX, headers={"Cache-Control": "no-store"})

@@ -20,8 +20,7 @@ Required shape:
       "changes": [{"target": "string", "action": "string", "from": "string", "to": "string", "reason": "string"}],
       "before_image": "string",
       "after_image": "string",
-      "image_instruction": "string",
-      "constraint_check": {"passed": true, "notes": ["string"]}
+      "image_instruction": "string"
     }
   ]
 }
@@ -36,4 +35,6 @@ Rules:
 - expressive: replace at most 2 core items, add at most 1 accessory.
 - Respect locked_items and unavailable_items.
 - Use placeholder after_image values. Do not call image generation.
+- Keep output short: strengths max 2, main_issues max 2, changes max 2 per plan, each reason under 60 Chinese characters.
+- Do not include extra fields, explanations, notes, Markdown, or repeated constraint text.
 - Return JSON only. No Markdown.

@@ -24,9 +24,18 @@ class DeepSeekProvider:
     base_url = "https://api.deepseek.com/v1"
 
     def __init__(self) -> None:
-        settings.require_deepseek_settings()
-        self.api_key = settings.DEEPSEEK_API_KEY
-        self.model = settings.DEEPSEEK_MODEL
+        if settings.STYLING_PROVIDER == "dashscope":
+            settings.require_qwen_vision_settings()
+            self.provider = "dashscope"
+            self.base_url = settings.DASHSCOPE_BASE_URL
+            self.api_key = settings.DASHSCOPE_API_KEY
+            self.model = settings.STYLING_MODEL or "qwen-plus"
+        else:
+            settings.require_deepseek_settings()
+            self.provider = "deepseek"
+            self.base_url = "https://api.deepseek.com/v1"
+            self.api_key = settings.DEEPSEEK_API_KEY
+            self.model = settings.STYLING_MODEL or settings.DEEPSEEK_MODEL
         self.timeout = settings.MODEL_TIMEOUT_SECONDS
 
     def generate_json(
@@ -116,6 +125,8 @@ class DeepSeekProvider:
                 json={
                     "model": self.model,
                     "response_format": {"type": "json_object"},
+                    "max_tokens": settings.MODEL_MAX_TOKENS,
+                    "temperature": 0.4,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},

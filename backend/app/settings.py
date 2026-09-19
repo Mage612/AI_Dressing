@@ -5,7 +5,10 @@ from dotenv import load_dotenv
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
+PROJECT_DIR = BACKEND_DIR.parent
+ROOT_ENV_PATH = PROJECT_DIR / ".env"
 ENV_PATH = BACKEND_DIR / ".env"
+load_dotenv(ROOT_ENV_PATH)
 load_dotenv(ENV_PATH)
 
 UPLOAD_DIR = BACKEND_DIR / "uploads"
@@ -17,8 +20,11 @@ DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
 DASHSCOPE_BASE_URL = os.getenv("DASHSCOPE_BASE_URL", "").rstrip("/")
 QWEN_VISION_MODEL = os.getenv("QWEN_VISION_MODEL", "qwen3.7-plus")
 QWEN_IMAGE_MODEL = os.getenv("QWEN_IMAGE_MODEL", "qwen-image-3.0-pro")
+QWEN_IMAGE_ASYNC_MODEL = os.getenv("QWEN_IMAGE_ASYNC_MODEL", "qwen-image-plus")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
+STYLING_PROVIDER = os.getenv("STYLING_PROVIDER", "dashscope").strip().lower()
+STYLING_MODEL = os.getenv("STYLING_MODEL", "").strip()
 AI_STYLING_MODE = os.getenv("AI_STYLING_MODE", "mock").strip().lower()
 AI_IMAGE_MODE = os.getenv("AI_IMAGE_MODE", "mock").strip().lower()
 STYLING_PROMPT_VERSION = os.getenv("STYLING_PROMPT_VERSION", "v0.1")
@@ -27,6 +33,7 @@ STYLING_DEBUG = os.getenv("STYLING_DEBUG", "1").strip().lower() in {"1", "true",
 QWEN_IMAGE_SIZE = os.getenv("QWEN_IMAGE_SIZE", "928*1664")
 QWEN_IMAGE_PLAN_LIMIT = int(os.getenv("QWEN_IMAGE_PLAN_LIMIT", "1"))
 MODEL_TIMEOUT_SECONDS = float(os.getenv("MODEL_TIMEOUT_SECONDS", "30"))
+MODEL_MAX_TOKENS = int(os.getenv("MODEL_MAX_TOKENS", "3600"))
 
 def _split_csv_env(name: str, defaults: list[str]) -> list[str]:
     raw = os.getenv(name, "")

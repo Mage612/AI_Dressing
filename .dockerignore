@@ -1,7 +1,6 @@
 .git
 .git.broken-*/
 .agents/
-.env
 backend/.env
 backend/uploads/
 backend/ai_runs.jsonl
