@@ -387,15 +387,16 @@ def generate_recommendation_image(
     reference_image_path = (
         get_uploaded_image_path(request.image_id) if request.image_id else None
     )
-    cache_key = _image_generation_cache_key(request, reference_image_path)
+    prompt = _build_item_image_prompt(
+        request.recommendation,
+        request.fixed_item,
+        has_reference_image=reference_image_path is not None,
+    )
+    cache_key = _image_generation_cache_key(request, reference_image_path, prompt)
     job = start_image_generation_job(
         plan_id=request.recommendation.plan_id,
         fallback_image_url=request.recommendation.image_url,
-        prompt=_build_item_image_prompt(
-            request.recommendation,
-            request.fixed_item,
-            has_reference_image=reference_image_path is not None,
-        ),
+        prompt=prompt,
         task_type="item_outfit_image_generation",
         prompt_version=settings.STYLING_PROMPT_VERSION,
         session_id=request.session_id,
@@ -434,12 +435,14 @@ def get_recommendation_image(job_id: str) -> GenerateRecommendationImageResponse
 def _image_generation_cache_key(
     request: GenerateRecommendationImageRequest,
     reference_image_path: Optional[Path],
+    prompt: str,
 ) -> str:
     payload = {
         "model": settings.QWEN_IMAGE_MODEL,
         "size": settings.QWEN_IMAGE_SIZE,
-        "fixed_item": request.fixed_item.dict(),
-        "recommendation": request.recommendation.dict(
+        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        "fixed_item": request.fixed_item.model_dump(),
+        "recommendation": request.recommendation.model_dump(
             exclude={"image_url", "constraint_check"}
         ),
     }
@@ -602,19 +605,23 @@ def _build_item_image_prompt(
     fixed_item: ClothingItem,
     has_reference_image: bool = False,
 ) -> str:
-    item_lines = "\n".join(f"- {item.type}: {item.description}" for item in recommendation.items)
-    anchor_lines = "\n".join(
-        [
-            f"- name: {fixed_item.name}",
-            f"- category: {fixed_item.category}",
-            f"- primary color: {fixed_item.primary_color}",
-            f"- pattern/texture: {fixed_item.pattern}",
-            f"- silhouette: {fixed_item.silhouette}",
-            f"- rise/waistline: {fixed_item.rise}",
-            f"- length: {fixed_item.length}",
-            f"- style tags: {', '.join(fixed_item.style_tags[:4])}",
-            f"- occasion tags: {', '.join(fixed_item.occasion_tags[:4])}",
+    complementary_items = ", ".join(
+        item.description
+        for item in recommendation.items
+        if item.type not in {"固定单品", "fixed item", "anchor item"}
+    ) or "simple complementary garments that do not cover the anchor garment"
+    anchor_attributes = ", ".join(
+        value
+        for value in [
+            fixed_item.name,
+            fixed_item.category,
+            fixed_item.primary_color,
+            fixed_item.pattern,
+            fixed_item.silhouette,
+            fixed_item.rise,
+            fixed_item.length,
         ]
+        if value and str(value).strip().lower() not in {"unknown", "未知", "none"}
     )
     reference_policy = (
         "A reference image is attached. Use the attached image as the source of truth for the fixed anchor item.\n"
@@ -629,7 +636,7 @@ def _build_item_image_prompt(
         "No reference image is attached. Follow the fixed anchor item structured description conservatively.\n"
     )
     return (
-        "Create one clean vertical full-body fashion photograph.\n"
+        "This must be a plain fashion photograph, not a graphic design. Create one clean vertical full-body photograph.\n"
         "Show exactly one realistic adult fashion model, in one continuous scene, wearing the complete described outfit from head to toe.\n"
         "The final image must contain only the dressed model and a simple realistic studio or lifestyle background.\n"
         "Do not create an infographic, product introduction, outfit breakdown, fashion guide, catalog layout, mood board, collage, split screen, before-and-after image, inset image, flat lay, or separately displayed garment.\n"
@@ -645,13 +652,9 @@ def _build_item_image_prompt(
         "If exact details are unknown, choose a conservative plain version instead of inventing decorations, prints, logos, or dramatic cuts.\n"
         "Use a clean lifestyle photography look, natural daylight, and a quiet uncluttered urban or studio background.\n"
         "Keep the model centered and the complete outfit clearly visible from head to toe, including shoes, with no text or graphic overlays.\n"
-        f"Fixed anchor item structured description:\n{anchor_lines}\n"
-        f"Outfit plan title: {recommendation.title}.\n"
-        f"Occasion: {recommendation.occasion_summary}.\n"
-        f"Items to wear:\n{item_lines}\n"
-        f"Styling reason: {recommendation.reason}.\n"
-        f"Extra image direction: {recommendation.image_instruction}.\n"
-        "Output only the finished clean e-commerce/editorial outfit photograph, never an explanatory design or abstract artwork."
+        f"The fixed anchor garment can be described as {anchor_attributes}.\n"
+        f"Dress the same model with these complementary pieces: {complementary_items}.\n"
+        "Output only one finished clean e-commerce outfit photograph. The image must have no layout, no written explanation, and no elements outside the single photographic scene."
     )
 
 

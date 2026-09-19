@@ -2,8 +2,16 @@ import pytest
 
 from app import settings
 from app.providers.qwen_image_provider import QwenImageProvider
-from app.schemas.item import ClothingItem, ItemRecommendation, RecommendationItem
-from app.services.styling_service import _build_item_image_prompt
+from app.schemas.item import (
+    ClothingItem,
+    GenerateRecommendationImageRequest,
+    ItemRecommendation,
+    RecommendationItem,
+)
+from app.services.styling_service import (
+    _build_item_image_prompt,
+    _image_generation_cache_key,
+)
 from app.services import image_generation_jobs
 
 
@@ -232,13 +240,15 @@ def test_item_image_prompt_includes_fixed_item_visual_attributes() -> None:
 
     prompt = _build_item_image_prompt(recommendation, fixed_item)
 
-    assert "Fixed anchor item structured description" in prompt
     assert "黑色高腰阔腿裤" in prompt
-    assert "primary color: 黑色" in prompt
-    assert "silhouette: 阔腿" in prompt
-    assert "rise/waistline: 高腰" in prompt
-    assert "length: 九分" in prompt
+    assert "黑色" in prompt
+    assert "阔腿" in prompt
+    assert "高腰" in prompt
+    assert "九分" in prompt
     assert "must remain visually recognizable" in prompt
+    assert "Outfit plan title" not in prompt
+    assert "Styling reason" not in prompt
+    assert recommendation.image_instruction not in prompt
 
 
 def test_item_image_prompt_prioritizes_reference_image() -> None:
@@ -286,3 +296,41 @@ def test_item_image_prompt_prioritizes_reference_image() -> None:
     assert "Do not add any new letters, numbers, words" in prompt
     assert "preserve only the authentic graphics" in prompt
     assert "complete outfit clearly visible from head to toe" in prompt
+    assert "not a graphic design" in prompt
+    assert "no written explanation" in prompt
+
+
+def test_image_cache_key_changes_when_image_prompt_changes(tmp_path) -> None:
+    reference_image = tmp_path / "anchor.png"
+    reference_image.write_bytes(b"same-reference")
+    fixed_item = ClothingItem(
+        category="上衣",
+        name="白色印花短袖T恤",
+        primary_color="白色",
+        pattern="数字印花",
+        silhouette="修身",
+        rise="未知",
+        length="常规",
+    )
+    recommendation = ItemRecommendation(
+        plan_id="recommended",
+        strategy="recommended",
+        strategy_label="推荐",
+        title="街头休闲",
+        occasion_summary="日常",
+        items=[RecommendationItem(type="下装", description="黑色工装短裤")],
+        reason="比例协调",
+        image_url="/uploads/fallback.png",
+        image_instruction="生成海报",
+    )
+    request = GenerateRecommendationImageRequest(
+        session_id="session-1",
+        image_id="image-1",
+        fixed_item=fixed_item,
+        recommendation=recommendation,
+    )
+
+    first_key = _image_generation_cache_key(request, reference_image, "prompt-v1")
+    second_key = _image_generation_cache_key(request, reference_image, "prompt-v2")
+
+    assert first_key != second_key
