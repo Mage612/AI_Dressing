@@ -175,6 +175,10 @@ tasks:
           在改善幅度、执行成本和用户限制之间取得最佳平衡。
         max_core_item_replacements: 1
         max_added_accessories: 1
+        required_visible_change:
+          - garment_color_or_color_retention
+          - garment_cut_or_neckline_or_proportion
+        rule: "配饰不能成为唯一改动；至少有一项肉眼可见的服装优化。"
 
       minimal:
         label: "少改就更好"
@@ -190,6 +194,7 @@ tasks:
           - hem_adjustment
           - shoe_adjustment
           - single_item_replacement
+        detail_rule: "写明具体颜色，以及领型、袖型、松紧、长度、腰线或穿法中的至少一项。"
 
       expressive:
         label: "更出彩"
@@ -204,6 +209,7 @@ tasks:
           - texture_contrast
           - silhouette_contrast
           - statement_accessory
+        detail_rule: "必须明确目标色彩方向和版型方向，不能只写更出彩或更有线条感。"
 
 # ============================================================
 # 5. 多轮对话与 Session Constraint

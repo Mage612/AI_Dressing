@@ -56,6 +56,17 @@ def validate_refine_plans(plans: list[RefinePlan], *, state: ConversationState) 
             change for change in plan.changes
             if _contains_any(change.action, ["replace", "swap", "换", "替换"])
         ]
+        garment_changes = [
+            change for change in plan.changes
+            if not _contains_any(
+                change.target,
+                ["accessory", "accessories", "bag", "jewelry", "scarf", "hat", "配饰", "包", "首饰", "帽"],
+            )
+        ]
+        if plan.plan_type == "recommended" and not garment_changes:
+            raise ConstraintValidationError(
+                "recommended plan must include a visible garment or styling change; an accessory alone is insufficient."
+            )
         replacement_limit = 2 if plan.plan_type == "expressive" else 1
         accessory_limit = 0 if plan.plan_type == "minimal" else 1
         if len(replacements) > replacement_limit:

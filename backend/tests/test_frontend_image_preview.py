@@ -45,3 +45,8 @@ def test_outfit_refinement_has_context_score_and_on_demand_image_flow() -> None:
     assert "vision_observation: diagnosis" in html
     assert "refinement = refinement || {};" in html
     assert "plan.after_image = imageUrl" in html
+    assert 'color: "配色"' in html
+    assert 'style_consistency: "风格统一"' in html
+    assert 'class="option-budget"' in html
+    assert 'class="option-change-list"' in html
+    assert "(plan.changes || []).map" in html

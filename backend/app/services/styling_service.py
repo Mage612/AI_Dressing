@@ -652,11 +652,12 @@ def _build_outfit_refinement_image_prompt(plan: RefinePlan, occasion: str) -> st
         for change in plan.changes
     ) or "Make only a subtle styling adjustment while preserving the original outfit."
     return (
-        "Edit the attached photograph with the smallest possible wardrobe changes. "
+        "Edit the attached photograph with restrained but clearly visible wardrobe improvements. "
         "This is an image-to-image fashion edit, not a new character or a redesign.\n"
         "Preserve the exact same person, face, hair, body proportions, skin tone, pose, camera angle, crop, lighting, and background.\n"
         "Preserve every original garment that is not explicitly changed. Keep original garment colors unless a listed change explicitly changes color.\n"
-        "Keep the result appropriate for " + occasion + ". Apply only these changes: " + changes + "\n"
+        "Keep the result appropriate for " + occasion + ". Apply every listed change accurately; do not omit a garment color, neckline, fit, length, waistline, fabric, or accessory detail that is specified. Apply only these changes: " + changes + "\n"
+        "The AFTER image must be visibly distinguishable from the reference in the specified clothing details, while all unlisted garments and scene details remain unchanged.\n"
         "Show one realistic person in one continuous photographic scene, fully visible in the same framing as the reference.\n"
         "Do not add text, captions, labels, score cards, arrows, color palettes, product panels, outfit breakdowns, icons, borders, collage, split screen, inset images, or watermarks.\n"
         "Do not display garments or accessories separately. Do not change the person's identity, gender presentation, age presentation, or body shape.\n"

@@ -145,6 +145,23 @@ def test_recommended_plan_allows_only_one_replacement() -> None:
         validate_refine_plans(plans, state=ConversationState())
 
 
+def test_recommended_plan_rejects_accessory_only_change() -> None:
+    plans = [
+        _plan("recommended", [
+            {"target": "配饰包", "action": "增加", "from": "无", "to": "米白色包", "reason": "增加重点"},
+        ]),
+        _plan("minimal", [
+            {"target": "上衣", "action": "调整", "from": "原穿法", "to": "前摆轻塞", "reason": "优化比例"},
+        ]),
+        _plan("expressive", [
+            {"target": "上衣", "action": "替换", "from": "圆领", "to": "酒红色V领", "reason": "增加色彩"},
+        ]),
+    ]
+
+    with pytest.raises(ConstraintValidationError, match="accessory alone"):
+        validate_refine_plans(plans, state=ConversationState())
+
+
 def test_locked_item_is_validated() -> None:
     plans = [
         _plan("recommended", [{"target": "pants", "action": "replace", "from": "pants", "to": "skirt", "reason": "why"}]),

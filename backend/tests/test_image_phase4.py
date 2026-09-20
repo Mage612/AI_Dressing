@@ -361,9 +361,11 @@ def test_outfit_refinement_prompt_preserves_person_and_only_applies_plan() -> No
 
     prompt = _build_outfit_refinement_image_prompt(plan, "面试会议")
 
-    assert "smallest possible wardrobe changes" in prompt
+    assert "restrained but clearly visible wardrobe improvements" in prompt
     assert "same person, face, hair, body proportions" in prompt
     assert "Preserve every original garment that is not explicitly changed" in prompt
+    assert "Apply every listed change accurately" in prompt
+    assert "visibly distinguishable" in prompt
     assert "上衣版型" in prompt
     assert "面试会议" in prompt
     assert "Do not add text" in prompt

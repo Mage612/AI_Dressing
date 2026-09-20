@@ -1656,9 +1656,9 @@
 
     .diagnosis-row {
       display: grid;
-      grid-template-columns: 20px 58px 1fr;
+      grid-template-columns: 20px 74px minmax(0, 1fr);
       gap: 8px;
-      align-items: center;
+      align-items: start;
       color: var(--muted);
       font-size: 13px;
     }
@@ -1676,6 +1676,12 @@
     .diagnosis-row b {
       color: var(--ink);
       font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+
+    .diagnosis-row > span:last-child {
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .core-problem {
@@ -1972,15 +1978,15 @@
 
     .option-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 10px;
     }
 
     .option-card {
       overflow: hidden;
       display: flex;
-      flex-direction: column;
-      min-height: 318px;
+      flex-direction: row;
+      min-height: 0;
       background: #fbf8f3;
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -1990,12 +1996,14 @@
     .option-image {
       position: relative;
       display: block;
-      height: 132px;
+      width: 112px;
+      min-width: 112px;
+      min-height: 176px;
       background-color: #eee8df;
       background-position: center;
       background-size: contain;
       background-repeat: no-repeat;
-      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
     }
 
     .option-index {
@@ -2037,6 +2045,38 @@
 
     .option-summary {
       display: block;
+    }
+
+    .option-budget {
+      display: inline-flex;
+      align-self: flex-start;
+      padding: 4px 8px;
+      color: var(--accent) !important;
+      background: var(--accent-soft);
+      border-radius: 999px;
+      font-weight: 650;
+    }
+
+    .option-change-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .option-change-row {
+      display: grid;
+      gap: 4px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+
+    .option-change-row b {
+      color: var(--ink);
+      font-size: 12px;
+    }
+
+    .option-swap {
+      color: var(--ink) !important;
+      font-weight: 600;
     }
 
     .option-detail {
@@ -3061,8 +3101,8 @@
           <div class="before-after" id="before-after-slider">
             <div class="ba-image ba-before" id="ba-before-image" aria-hidden="true"></div>
             <div class="ba-image ba-after" id="ba-after-image" aria-hidden="true"></div>
-            <span class="ba-label before">BEFORE</span>
-            <span class="ba-label after">AFTER</span>
+            <span class="ba-label before">修改前</span>
+            <span class="ba-label after">修改后</span>
             <span class="ba-divider"></span>
             <span class="ba-handle">↔</span>
             <span class="ba-hint">原图 / 改进后对比</span>
@@ -3115,7 +3155,7 @@
         </section>
 
         <section class="light-options">
-          <h2>两个轻量备选</h2>
+          <h2>两套备选方案</h2>
           <div class="option-grid" id="light-option-grid">
             <button class="option-card" data-toast="已切换到轻量方案：不换裤子">
               <span class="option-index">01</span>
@@ -4050,6 +4090,16 @@
 
     function renderDiagnosisRows(dimensions) {
       if (!diagnosisGrid) return;
+      const dimensionLabels = {
+        color: "配色",
+        proportion: "比例",
+        silhouette: "廓形",
+        style_consistency: "风格统一",
+        occasion_fit: "场合适配",
+        visual_focus: "视觉重点",
+        personal_fit: "本人适配",
+        style_completion: "风格完成度"
+      };
       diagnosisGrid.innerHTML = (dimensions || []).map((item) => {
         const isGood = item.status === "good";
         const mark = isGood ? "✓" : "△";
@@ -4057,7 +4107,7 @@
         return `
             <div class="diagnosis-row">
               <span class="${className}">${mark}</span>
-              <b>${escapeHtml(item.dimension)}</b>
+              <b>${escapeHtml(dimensionLabels[item.dimension] || item.dimension)}</b>
               <span>${escapeHtml(item.summary)}</span>
             </div>`;
       }).join("");
@@ -4106,11 +4156,12 @@
         expressive: "更出彩"
       };
       lightOptionGrid.innerHTML = (plans || []).map((plan, index) => {
-        const firstChange = (plan.changes || [])[0] || {};
-        const changeText = firstChange.target
-          ? `${firstChange.target}：${firstChange.from || "原搭配"} → ${firstChange.to || "优化后"}`
-          : plan.change_budget;
-        const reasonText = firstChange.reason || plan.summary;
+        const changes = (plan.changes || []).map((change, changeIndex) => `
+          <span class="option-change-row">
+            <b>${changeIndex + 1}. ${escapeHtml(change.target || "穿搭细节")}</b>
+            <span class="option-swap">${escapeHtml(change.from || "原搭配")} → ${escapeHtml(change.to || "优化后")}</span>
+            <span>${escapeHtml(change.reason || "提升整体协调度")}</span>
+          </span>`).join("");
         return `
             <button class="option-card" data-record-action="accepted" data-record-scope="outfit-option" data-plan-id="${escapeAttribute(plan.plan_id)}" data-memory>
               <span class="option-image" style="background-image:url('${escapeAttribute(resolveMediaUrl(plan.after_image || currentOutfitSession.imageUrl))}')">
@@ -4118,9 +4169,9 @@
               </span>
               <span class="option-body">
                 <strong>${escapeHtml(labelMap[plan.plan_type] || plan.title)}</strong>
+                <span class="option-budget">${escapeHtml(plan.change_budget || "少量调整")}</span>
                 <span class="option-summary">${escapeHtml(plan.summary)}</span>
-                <span class="option-detail"><b>改动</b> ${escapeHtml(changeText)}</span>
-                <span class="option-detail"><b>理由</b> ${escapeHtml(reasonText)}</span>
+                <span class="option-change-list">${changes}</span>
                 <span class="option-card-cta">采用这个</span>
               </span>
             </button>`;

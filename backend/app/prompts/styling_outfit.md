@@ -45,11 +45,19 @@ Rules:
 - If vision shows a fitted top or visible waistline, do not call it loose or say the waistline is absent.
 - When the existing outfit is coordinated, phrase issues as light optimization opportunities.
 - Return exactly 3 plans: recommended, minimal, expressive.
+- Make the three plans meaningfully different. Do not produce paraphrases of the same change.
+- Every plan must name concrete visual attributes instead of vague phrases such as "更有线条感" or "更协调".
+- When changing a top, specify its exact color and at least one construction detail: neckline (such as V领/方领/圆领), sleeve, fit, length, fabric, or hem treatment.
+- When changing a bottom, specify its exact color and at least one construction detail: rise, silhouette, length, fabric, or hem shape.
+- If color is retained, explicitly say "保留原色". If color changes, name the target color; never say only "提亮" or "换个颜色".
+- recommended must include at least one clearly visible garment cut, proportion, neckline, layering, or color improvement. Adding an accessory alone is not a valid recommended plan.
+- minimal should remain easy to execute but must still describe the exact styling operation and its visible result.
+- expressive should include a deliberate color or silhouette direction while preserving the person's identity and most of the original look.
 - recommended: replace at most 1 core item, add at most 1 accessory.
 - minimal: add 0 accessories, replace at most 1 core item.
 - expressive: replace at most 2 core items, add at most 1 accessory.
 - Respect locked_items and unavailable_items.
 - Set after_image equal to before_image. Do not call image generation.
-- Keep output short: strengths max 2, main_issues max 2, changes max 2 per plan, each reason under 60 Chinese characters.
+- Keep output concise: strengths max 2, main_issues max 2, changes 1-2 per plan, each reason under 60 Chinese characters.
 - Do not include extra fields, explanations, notes, Markdown, or repeated constraint text.
 - Return JSON only. No Markdown.
