@@ -4207,6 +4207,18 @@
       outfitFileInput.click();
     }
 
+    async function waitForOutfitJob(path, jobId) {
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        const job = await requestJson(`${path}/${jobId}`, {}, 15000);
+        if (job.status === "completed" && job.result) return job.result;
+        if (job.status === "failed") {
+          throw new Error(job.error || "AI 处理失败，请稍后重试");
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+      throw new Error("AI 处理时间较长，请稍后重试");
+    }
+
     async function uploadAndAnalyzeOutfit(file) {
       if (!validateImageFile(file)) return;
 
@@ -4233,16 +4245,17 @@
         setContainedBackground(baBeforeImage, uploaded.image_url);
         showToast("AI 正在诊断这身穿搭...");
 
-        const diagnosis = await requestJson("/analyze-outfit", {
+        const diagnosisJob = await requestJson("/analyze-outfit-job", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image_id: uploaded.image_id })
-        }, 60000);
+        }, 15000);
+        const diagnosis = await waitForOutfitJob("/analyze-outfit-job", diagnosisJob.job_id);
 
         renderOutfitDiagnosis(diagnosis, null);
         showToast("诊断完成，正在生成修改方案...");
 
-        const refinement = await requestJson("/refine-outfit", {
+        const refinementJob = await requestJson("/refine-outfit-job", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -4258,7 +4271,8 @@
             },
             vision_observation: diagnosis
           })
-        }, 90000);
+        }, 15000);
+        const refinement = await waitForOutfitJob("/refine-outfit-job", refinementJob.job_id);
 
         renderOutfitDiagnosis(refinement, refinement);
         showToast("AI 已生成修改建议");

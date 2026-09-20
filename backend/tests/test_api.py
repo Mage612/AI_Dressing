@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 from urllib.parse import urlparse
 
 import pytest
@@ -172,6 +173,33 @@ def test_analyze_outfit_returns_schema() -> None:
         _cleanup_uploaded_file(uploaded["image_url"])
 
 
+def test_outfit_analysis_job_completes() -> None:
+    uploaded = _upload_test_image()
+
+    try:
+        started = client.post(
+            "/api/analyze-outfit-job",
+            json={"image_id": uploaded["image_id"]},
+        )
+        assert started.status_code == 200
+        job_id = started.json()["job_id"]
+
+        result = None
+        for _ in range(20):
+            response = client.get(f"/api/analyze-outfit-job/{job_id}")
+            assert response.status_code == 200
+            if response.json()["status"] != "pending":
+                result = response.json()
+                break
+            time.sleep(0.01)
+
+        assert result is not None
+        assert result["status"] == "completed"
+        assert result["result"]["overall_summary"]
+    finally:
+        _cleanup_uploaded_file(uploaded["image_url"])
+
+
 def test_refine_outfit_returns_three_plan_types() -> None:
     uploaded = _upload_test_image()
 
@@ -250,6 +278,41 @@ def test_refine_outfit_request_accepts_existing_vision_observation() -> None:
 
     assert request.vision_observation is not None
     assert request.vision_observation.overall_summary == "整体简洁。"
+
+
+def test_outfit_refinement_job_completes() -> None:
+    uploaded = _upload_test_image()
+
+    try:
+        diagnosis = client.post(
+            "/api/analyze-outfit",
+            json={"image_id": uploaded["image_id"]},
+        ).json()
+        started = client.post(
+            "/api/refine-outfit-job",
+            json={
+                "image_id": uploaded["image_id"],
+                "occasion": "日常休闲",
+                "vision_observation": diagnosis,
+            },
+        )
+        assert started.status_code == 200
+        job_id = started.json()["job_id"]
+
+        result = None
+        for _ in range(20):
+            response = client.get(f"/api/refine-outfit-job/{job_id}")
+            assert response.status_code == 200
+            if response.json()["status"] != "pending":
+                result = response.json()
+                break
+            time.sleep(0.01)
+
+        assert result is not None
+        assert result["status"] == "completed"
+        assert len(result["result"]["plans"]) == 3
+    finally:
+        _cleanup_uploaded_file(uploaded["image_url"])
 
 
 def test_review_outfit_returns_comparison_report() -> None:

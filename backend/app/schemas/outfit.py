@@ -22,6 +22,13 @@ class AnalyzeOutfitResponse(BaseModel):
     keep_items: List[str] = Field(default_factory=list)
 
 
+class AnalyzeOutfitJobResponse(BaseModel):
+    job_id: str
+    status: Literal["pending", "completed", "failed"]
+    result: Optional[AnalyzeOutfitResponse] = None
+    error: str = ""
+
+
 class ConversationState(BaseModel):
     locked_items: List[str] = Field(default_factory=list)
     unavailable_items: List[str] = Field(default_factory=list)
@@ -100,6 +107,13 @@ class RefineOutfitResponse(BaseModel):
     diagnosis_dimensions: List[DiagnosisDimension] = Field(default_factory=list)
     keep_items: List[str] = Field(default_factory=list)
     plans: List[RefinePlan] = Field(default_factory=list)
+
+
+class RefineOutfitJobResponse(BaseModel):
+    job_id: str
+    status: Literal["pending", "completed", "failed"]
+    result: Optional[RefineOutfitResponse] = None
+    error: str = ""
 
 
 class GenerateOutfitImageRequest(BaseModel):
