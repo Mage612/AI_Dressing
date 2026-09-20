@@ -3,4 +3,4 @@ set -eu
 
 cd /code
 mkdir -p backend/uploads
-pip install --no-cache-dir -r backend/requirements.txt
+pip install --no-cache-dir -r backend/requirements-prod.txt
