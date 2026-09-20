@@ -47,17 +47,25 @@ def validate_refine_plans(plans: list[RefinePlan], *, state: ConversationState) 
             for change in plan.changes:
                 if locked_item and locked_item in _text(change.target, change.from_, change.to):
                     raise ConstraintValidationError("locked_item was modified.")
-        if plan.plan_type == "minimal":
-            added_accessories = [
-                change for change in plan.changes
-                if _contains_any(change.target, ["accessory", "accessories", "bag", "jewelry", "scarf", "hat"])
-                and _contains_any(change.action, ["add", "increase", "新增", "增加"])
-            ]
-            if added_accessories:
-                raise ConstraintValidationError("minimal plan added accessories.")
-            replacements = [change for change in plan.changes if _contains_any(change.action, ["replace", "swap", "换", "替换"])]
-            if len(replacements) > 1:
-                raise ConstraintValidationError("minimal plan replaced more than 1 item.")
+        added_accessories = [
+            change for change in plan.changes
+            if _contains_any(change.target, ["accessory", "accessories", "bag", "jewelry", "scarf", "hat", "配饰", "包", "首饰", "帽"])
+            and _contains_any(change.action, ["add", "increase", "新增", "增加"])
+        ]
+        replacements = [
+            change for change in plan.changes
+            if _contains_any(change.action, ["replace", "swap", "换", "替换"])
+        ]
+        replacement_limit = 2 if plan.plan_type == "expressive" else 1
+        accessory_limit = 0 if plan.plan_type == "minimal" else 1
+        if len(replacements) > replacement_limit:
+            raise ConstraintValidationError(
+                f"{plan.plan_type} plan replaced more than {replacement_limit} item(s)."
+            )
+        if len(added_accessories) > accessory_limit:
+            raise ConstraintValidationError(
+                f"{plan.plan_type} plan added more than {accessory_limit} accessory item(s)."
+            )
         plan.constraint_check = {"passed": True, "validator": "backend"}
 
 

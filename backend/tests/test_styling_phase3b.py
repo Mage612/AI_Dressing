@@ -131,6 +131,20 @@ def test_minimal_plan_change_budget_is_validated() -> None:
         validate_refine_plans(plans, state=ConversationState())
 
 
+def test_recommended_plan_allows_only_one_replacement() -> None:
+    plans = [
+        _plan("recommended", [
+            {"target": "top", "action": "replace", "from": "old", "to": "new", "reason": "why"},
+            {"target": "shoes", "action": "replace", "from": "old", "to": "new", "reason": "why"},
+        ]),
+        _plan("minimal", []),
+        _plan("expressive", []),
+    ]
+
+    with pytest.raises(ConstraintValidationError):
+        validate_refine_plans(plans, state=ConversationState())
+
+
 def test_locked_item_is_validated() -> None:
     plans = [
         _plan("recommended", [{"target": "pants", "action": "replace", "from": "pants", "to": "skirt", "reason": "why"}]),

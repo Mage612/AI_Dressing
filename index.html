@@ -1573,6 +1573,87 @@
       margin: 14px 0;
     }
 
+    .outfit-score-card {
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      margin: 14px 0;
+      background: #f7f1eb;
+      border: 1px solid #eadfd7;
+      border-radius: 12px;
+    }
+
+    .outfit-score-total {
+      width: 74px;
+      height: 74px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--accent);
+      border-radius: 50%;
+      font-size: 25px;
+      font-weight: 800;
+    }
+
+    .outfit-score-total small {
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .outfit-score-verdict strong,
+    .outfit-score-verdict span {
+      display: block;
+    }
+
+    .outfit-score-verdict strong {
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .outfit-score-verdict span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .score-dimension-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .score-dimension {
+      padding: 10px;
+      background: var(--surface-soft);
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .score-dimension b {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .score-dimension span {
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .occasion-result {
+      padding: 11px 12px;
+      margin-bottom: 14px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
     .diagnosis-row {
       display: grid;
       grid-template-columns: 20px 58px 1fr;
@@ -1692,6 +1773,55 @@
       background-repeat: no-repeat;
       background-position: center;
       border-radius: 14px;
+    }
+
+    .ba-after.awaiting::after,
+    .ba-after.generating::after {
+      content: "确认方案后生成优化图";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      color: var(--accent);
+      background: rgba(247, 241, 235, 0.88);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .ba-after.generating::after {
+      content: "AI 正在进行最小改动...";
+    }
+
+    .ba-after.generated {
+      cursor: zoom-in;
+    }
+
+    .outfit-generate-actions {
+      padding: 0 16px 12px;
+    }
+
+    .outfit-generate-actions button {
+      width: 100%;
+      min-height: 46px;
+    }
+
+    .outfit-context-fields {
+      display: none;
+      padding: 14px;
+      margin: 14px 0;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .outfit-context-fields.show {
+      display: block;
+    }
+
+    .outfit-context-fields .label:first-child {
+      margin-top: 0;
     }
 
     .ba-before {
@@ -2626,6 +2756,23 @@
         <label class="upload-prompt-label" for="upload-free-text">也可以先告诉 AI</label>
         <textarea class="soft-textarea" id="upload-free-text" placeholder="例如：这条黑色阔腿裤怎么搭比较通勤？"></textarea>
         <p class="label" id="upload-note">可以附带场合、身高或不想穿的单品。</p>
+        <div class="outfit-context-fields" id="outfit-context-fields">
+          <span class="label">使用场合</span>
+          <div class="chips" id="outfit-occasion-group" data-choice-group>
+            <button class="chip active" data-value="日常休闲">日常休闲</button>
+            <button class="chip" data-value="通勤办公">通勤办公</button>
+            <button class="chip" data-value="约会聚会">约会聚会</button>
+            <button class="chip" data-value="面试会议">面试会议</button>
+            <button class="chip" data-value="婚礼宴会">婚礼宴会</button>
+            <button class="chip" data-value="旅行出游">旅行出游</button>
+          </div>
+          <span class="label">改动强度</span>
+          <div class="chips" id="outfit-intensity-group" data-choice-group>
+            <button class="chip" data-value="minimal">轻微调整</button>
+            <button class="chip active" data-value="recommended">推荐调整</button>
+            <button class="chip" data-value="expressive">明显升级</button>
+          </div>
+        </div>
         <button class="primary upload-submit" data-upload-text-submit>带着这句去上传</button>
       </div>
     </section>
@@ -2861,6 +3008,16 @@
           </div>
           <p id="diagnosis-summary">这身基础其实不错，清爽、日常，配色也比较协调。主要问题不是“不好看”，而是比例和视觉重点还可以更明确。</p>
 
+          <div class="outfit-score-card" id="outfit-score-card">
+            <div class="outfit-score-total"><span id="outfit-score-total">--<small>/100</small></span></div>
+            <div class="outfit-score-verdict">
+              <strong>当前穿搭评分</strong>
+              <span id="outfit-score-verdict">上传照片后，从穿搭本身的五个维度进行评价。</span>
+            </div>
+          </div>
+          <div class="score-dimension-grid" id="outfit-score-dimensions"></div>
+          <div class="occasion-result" id="occasion-assessment">默认按日常休闲场合判断，也可以在上传前选择其他场合。</div>
+
           <div class="diagnosis-grid" id="diagnosis-grid">
             <div class="diagnosis-row">
               <span class="diag-good">✓</span>
@@ -2942,6 +3099,10 @@
                 <button class="micro-action" data-toast="已告诉 AI：换成低饱和颜色">换个颜色</button>
               </div>
             </div>
+          </div>
+
+          <div class="outfit-generate-actions">
+            <button class="primary" id="generate-outfit-image-btn" data-generate-outfit-image>按这个方案生成右侧优化图</button>
           </div>
 
           <div class="diagnosis-actions">
@@ -3222,6 +3383,9 @@
     const uploadHelper = document.getElementById("upload-helper");
     const uploadFreeText = document.getElementById("upload-free-text");
     const uploadNote = document.getElementById("upload-note");
+    const outfitContextFields = document.getElementById("outfit-context-fields");
+    const outfitOccasionGroup = document.getElementById("outfit-occasion-group");
+    const outfitIntensityGroup = document.getElementById("outfit-intensity-group");
     const confirmItemPhoto = document.getElementById("confirm-item-photo");
     const confirmItemName = document.getElementById("confirm-item-name");
     const confirmItemSummary = document.getElementById("confirm-item-summary");
@@ -3239,11 +3403,16 @@
     const downloadGeneratedImageButton = document.getElementById("download-generated-image");
     const diagnosisSummary = document.getElementById("diagnosis-summary");
     const diagnosisGrid = document.getElementById("diagnosis-grid");
+    const outfitScoreTotal = document.getElementById("outfit-score-total");
+    const outfitScoreVerdict = document.getElementById("outfit-score-verdict");
+    const outfitScoreDimensions = document.getElementById("outfit-score-dimensions");
+    const occasionAssessment = document.getElementById("occasion-assessment");
     const coreProblemText = document.getElementById("core-problem-text");
     const mainPlanTitle = document.getElementById("main-plan-title");
     const mainPlanBudget = document.getElementById("main-plan-budget");
     const baBeforeImage = document.getElementById("ba-before-image");
     const baAfterImage = document.getElementById("ba-after-image");
+    const generateOutfitImageButton = document.getElementById("generate-outfit-image-btn");
     const changeList = document.getElementById("change-list");
     const changeListTitle = document.getElementById("change-list-title");
     const lightOptionGrid = document.getElementById("light-option-grid");
@@ -3314,7 +3483,9 @@
       imageUrl: null,
       diagnosis: null,
       refinement: null,
-      freeTextConstraints: ""
+      freeTextConstraints: "",
+      occasion: "日常休闲",
+      changeIntensity: "recommended"
     };
     const currentReviewSession = {
       originalImageId: null,
@@ -3456,9 +3627,16 @@
     }
 
     function getGeneratedPlan(planId) {
-      return (currentSession.recommendations || []).find((item) => (
+      const itemPlan = (currentSession.recommendations || []).find((item) => (
         item.plan_id === planId && item.image_status === "generated" && item.image_url
       ));
+      if (itemPlan) return itemPlan;
+      const outfitPlans = (currentOutfitSession.refinement && currentOutfitSession.refinement.plans) || [];
+      const outfitPlan = outfitPlans.find((item) => (
+        item.plan_id === planId && item.image_status === "generated" && item.after_image
+      ));
+      if (!outfitPlan) return null;
+      return { ...outfitPlan, image_url: outfitPlan.after_image };
     }
 
     function closeGeneratedImagePreview() {
@@ -3592,7 +3770,9 @@
       if (scope === "outfit-option") {
         return plans.find((plan) => plan.plan_id === planId);
       }
-      return plans.find((plan) => plan.plan_type === "recommended") || plans[0];
+      return plans.find((plan) => plan.plan_type === currentOutfitSession.changeIntensity)
+        || plans.find((plan) => plan.plan_type === "recommended")
+        || plans[0];
     }
 
     function buildItemRecord(button, action) {
@@ -3625,7 +3805,7 @@
         imageUrl: plan.after_image || currentOutfitSession.imageUrl,
         title: `${plan.title} · ${typeLabel}`,
         summary: plan.summary,
-        tags: ["这身怎么改", getRecordActionLabel(action), plan.change_budget]
+        tags: ["这身怎么改", currentOutfitSession.occasion, getRecordActionLabel(action), plan.change_budget]
       };
     }
 
@@ -3798,6 +3978,9 @@
         uploadFreeText.value = note || "";
       }
       if (uploadNote) uploadNote.textContent = config.note;
+      if (outfitContextFields) {
+        outfitContextFields.classList.toggle("show", task === "outfit" || task === "occasion");
+      }
     }
 
     function startUploadTask(task, note = "") {
@@ -3807,16 +3990,12 @@
     }
 
     function getInputForPendingTask() {
-      if (pendingUploadTask === "outfit") return outfitFileInput;
+      if (pendingUploadTask === "outfit" || pendingUploadTask === "occasion") return outfitFileInput;
       if (pendingUploadTask === "review") return reviewFileInput;
       return itemFileInput;
     }
 
     function openPendingFilePicker(source = "gallery") {
-      if (pendingUploadTask === "occasion") {
-        showToast("场合搭配入口已保留，完整链路会放到下一阶段。");
-        return;
-      }
       if (pendingUploadTask === "review" && !currentOutfitSession.imageId) {
         showToast("请先完成一次「这身怎么改」，再上传试穿图复评。");
         startUploadTask("outfit");
@@ -3840,8 +4019,11 @@
         openPendingFilePicker("gallery");
         return;
       }
-      if (pendingUploadTask === "outfit") {
+      if (pendingUploadTask === "outfit" || pendingUploadTask === "occasion") {
         currentOutfitSession.freeTextConstraints = text;
+        currentOutfitSession.occasion = getActiveChipText(outfitOccasionGroup, "日常休闲");
+        const intensityChip = outfitIntensityGroup && outfitIntensityGroup.querySelector(".chip.active");
+        currentOutfitSession.changeIntensity = intensityChip ? intensityChip.dataset.value : "recommended";
         openPendingFilePicker("gallery");
         return;
       }
@@ -3850,7 +4032,7 @@
         openPendingFilePicker("gallery");
         return;
       }
-      showToast("已记录场合需求，完整「场合怎么穿」链路会在下一阶段接入。");
+      showToast("请先选择一张穿搭照片");
     }
 
     function renderDiagnosisRows(dimensions) {
@@ -3866,6 +4048,21 @@
               <span>${escapeHtml(item.summary)}</span>
             </div>`;
       }).join("");
+    }
+
+    function renderOutfitScore(score) {
+      if (!score) return;
+      if (outfitScoreTotal) {
+        outfitScoreTotal.innerHTML = `${Number(score.total || 0)}<small>/100</small>`;
+      }
+      if (outfitScoreVerdict) outfitScoreVerdict.textContent = score.verdict || "已完成穿搭评价";
+      if (outfitScoreDimensions) {
+        outfitScoreDimensions.innerHTML = (score.dimensions || []).map((item) => `
+          <div class="score-dimension">
+            <b><span>${escapeHtml(item.label)}</span><em>${Number(item.score || 0)}/20</em></b>
+            <span>${escapeHtml(item.summary)}</span>
+          </div>`).join("");
+      }
     }
 
     function renderChangeBlocks(plan) {
@@ -3926,6 +4123,10 @@
       if (diagnosisSummary) {
         diagnosisSummary.textContent = "图片上传中，AI 正在从比例、色彩、场景匹配和视觉重点分析这身穿搭。";
       }
+      if (outfitScoreTotal) outfitScoreTotal.innerHTML = `--<small>/100</small>`;
+      if (outfitScoreVerdict) outfitScoreVerdict.textContent = "AI 正在评价穿搭本身，不评价你的外貌或身材。";
+      if (outfitScoreDimensions) outfitScoreDimensions.innerHTML = "";
+      if (occasionAssessment) occasionAssessment.textContent = `正在判断这身是否适合${currentOutfitSession.occasion}。`;
       renderDiagnosisRows([
         { dimension: "上传", status: "good", summary: "图片读取中" },
         { dimension: "诊断", status: "warning", summary: "等待 AI 分析" }
@@ -3935,6 +4136,17 @@
       }
       if (mainPlanTitle) mainPlanTitle.textContent = "AI 正在给你改";
       if (mainPlanBudget) mainPlanBudget.textContent = "上传后生成主修改方案";
+      if (generateOutfitImageButton) {
+        generateOutfitImageButton.disabled = true;
+        generateOutfitImageButton.textContent = "等待文字建议";
+        generateOutfitImageButton.removeAttribute("data-open-generated-image");
+        delete generateOutfitImageButton.dataset.planId;
+      }
+      baAfterImage.classList.remove("generated", "generating");
+      baAfterImage.classList.add("awaiting");
+      baAfterImage.removeAttribute("data-open-generated-image");
+      baAfterImage.removeAttribute("tabindex");
+      baAfterImage.setAttribute("role", "img");
       if (changeList) {
         changeList.innerHTML = `<h3 id="change-list-title">等待修改方案</h3>`;
       }
@@ -3948,24 +4160,32 @@
       currentOutfitSession.refinement = refinement;
 
       const plans = refinement.plans || [];
-      const mainPlan = plans.find((plan) => plan.plan_type === "recommended") || plans[0];
+      const mainPlan = plans.find((plan) => plan.plan_type === currentOutfitSession.changeIntensity)
+        || plans.find((plan) => plan.plan_type === "recommended")
+        || plans[0];
       const alternatives = plans.filter((plan) => plan.plan_id !== (mainPlan && mainPlan.plan_id));
 
       setImageSource(diagnosisPhotoImg, currentOutfitSession.imageUrl);
-      if (diagnosisSummary) {
-        diagnosisSummary.textContent = diagnosis.overall_summary;
-      }
-      renderDiagnosisRows(diagnosis.diagnosis_dimensions);
+      if (diagnosisSummary) diagnosisSummary.textContent = refinement.overall_summary || diagnosis.overall_summary;
+      renderOutfitScore(refinement.score);
+      if (occasionAssessment) occasionAssessment.textContent = refinement.occasion_assessment || `按${refinement.occasion || currentOutfitSession.occasion}场合评估。`;
+      renderDiagnosisRows(refinement.diagnosis_dimensions || diagnosis.diagnosis_dimensions);
       if (coreProblemText) {
-        coreProblemText.textContent = (diagnosis.main_issues || []).join("；") || "这身整体不错，主要优化比例和视觉重点。";
+        coreProblemText.textContent = (refinement.main_issues || diagnosis.main_issues || []).join("；") || "这身整体不错，主要优化比例和视觉重点。";
       }
 
       if (mainPlan) {
         if (mainPlanTitle) mainPlanTitle.textContent = mainPlan.title;
         if (mainPlanBudget) mainPlanBudget.textContent = mainPlan.change_budget;
         setContainedBackground(baBeforeImage, mainPlan.before_image || currentOutfitSession.imageUrl);
-        setContainedBackground(baAfterImage, mainPlan.after_image || currentOutfitSession.imageUrl);
+        setContainedBackground(baAfterImage, currentOutfitSession.imageUrl);
+        baAfterImage.classList.add("awaiting");
         renderChangeBlocks(mainPlan);
+        if (generateOutfitImageButton) {
+          generateOutfitImageButton.disabled = false;
+          generateOutfitImageButton.dataset.planId = mainPlan.plan_id;
+          generateOutfitImageButton.textContent = "按这个方案生成右侧优化图";
+        }
       }
       renderLightOptions(alternatives.slice(0, 2));
       syncRecordButtons(document.getElementById("diagnosis-screen"));
@@ -3988,6 +4208,10 @@
     async function uploadAndAnalyzeOutfit(file) {
       if (!validateImageFile(file)) return;
 
+      currentOutfitSession.occasion = getActiveChipText(outfitOccasionGroup, currentOutfitSession.occasion || "日常休闲");
+      const intensityChip = outfitIntensityGroup && outfitIntensityGroup.querySelector(".chip.active");
+      currentOutfitSession.changeIntensity = intensityChip ? intensityChip.dataset.value : "recommended";
+
       showScreen("diagnosis-screen");
       setOutfitUploadBusy(true);
       setDiagnosisLoading(file);
@@ -4007,27 +4231,24 @@
         setContainedBackground(baBeforeImage, uploaded.image_url);
         showToast("AI 正在诊断这身穿搭...");
 
-        const diagnosis = await requestJson("/analyze-outfit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image_id: uploaded.image_id })
-        }, 60000);
-
         const refinement = await requestJson("/refine-outfit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             image_id: uploaded.image_id,
+            occasion: currentOutfitSession.occasion,
+            change_intensity: currentOutfitSession.changeIntensity,
             free_text_constraints: currentOutfitSession.freeTextConstraints,
             conversation_state: {
               locked_items: [],
+              occasion_constraints: [currentOutfitSession.occasion],
               rejected_items: [],
               user_notes: currentOutfitSession.freeTextConstraints
             }
           })
-        });
+        }, 90000);
 
-        renderOutfitDiagnosis(diagnosis, refinement);
+        renderOutfitDiagnosis(refinement, refinement);
         showToast("AI 已生成修改建议");
       } catch (error) {
         showToast(error.message || "诊断失败，请稍后再试");
@@ -4044,7 +4265,86 @@
 
     function getMainOutfitPlan() {
       const plans = (currentOutfitSession.refinement && currentOutfitSession.refinement.plans) || [];
-      return plans.find((plan) => plan.plan_type === "recommended") || plans[0] || null;
+      return plans.find((plan) => plan.plan_type === currentOutfitSession.changeIntensity)
+        || plans.find((plan) => plan.plan_type === "recommended")
+        || plans[0]
+        || null;
+    }
+
+    function updateOutfitRefinementImage(planId, imageUrl, status) {
+      const plan = getMainOutfitPlan();
+      if (!plan || plan.plan_id !== planId) return;
+      plan.image_status = status;
+      baAfterImage.classList.remove("awaiting", "generating", "generated");
+      if (status === "pending") {
+        baAfterImage.classList.add("generating");
+        generateOutfitImageButton.disabled = true;
+        generateOutfitImageButton.textContent = "AI 正在生成优化图...";
+        return;
+      }
+      if (status === "generated" && imageUrl) {
+        plan.after_image = imageUrl;
+        baAfterImage.classList.add("generated");
+        setContainedBackground(baAfterImage, imageUrl);
+        baAfterImage.dataset.openGeneratedImage = planId;
+        baAfterImage.tabIndex = 0;
+        baAfterImage.setAttribute("role", "button");
+        baAfterImage.setAttribute("aria-label", "AI 优化后穿搭，点击查看大图并保存");
+        generateOutfitImageButton.disabled = false;
+        generateOutfitImageButton.dataset.openGeneratedImage = planId;
+        generateOutfitImageButton.textContent = "查看 / 保存优化图";
+        syncRecordButtons(document.getElementById("diagnosis-screen"));
+        return;
+      }
+      baAfterImage.classList.add("awaiting");
+      generateOutfitImageButton.disabled = false;
+      generateOutfitImageButton.textContent = "生成失败，点击重试";
+    }
+
+    async function pollOutfitRefinementImage(planId, jobId) {
+      for (let attempt = 0; attempt < 48; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2500));
+        try {
+          const result = await requestJson(`/outfit-refinement-image/${encodeURIComponent(jobId)}`, {}, 20000);
+          updateOutfitRefinementImage(planId, result.image_url, result.image_status);
+          if (result.image_status !== "pending") {
+            if (result.image_status === "failed") showToast(result.error || "优化图生成失败");
+            return;
+          }
+        } catch (error) {
+          if (attempt >= 47) updateOutfitRefinementImage(planId, "", "failed");
+        }
+      }
+    }
+
+    async function generateOutfitRefinementImage() {
+      const plan = getMainOutfitPlan();
+      if (!plan || plan.image_status === "pending" || plan.image_status === "generated") return;
+      updateOutfitRefinementImage(plan.plan_id, "", "pending");
+      try {
+        const result = await requestJson("/outfit-refinement-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: currentOutfitSession.refinement.session_id,
+            image_id: currentOutfitSession.imageId,
+            occasion: currentOutfitSession.occasion,
+            plan,
+            visitor_id: getVisitorId()
+          })
+        }, 180000);
+        updateOutfitRefinementImage(plan.plan_id, result.image_url, result.image_status);
+        if (result.image_status === "pending" && result.job_id) {
+          pollOutfitRefinementImage(plan.plan_id, result.job_id);
+        } else if (result.image_status === "generated") {
+          showToast(result.cached ? "已读取之前生成的优化图" : "右侧优化图已生成");
+        } else if (result.image_status === "failed") {
+          showToast(result.error || "优化图生成失败，文字建议仍可使用");
+        }
+      } catch (error) {
+        updateOutfitRefinementImage(plan.plan_id, "", "failed");
+        showToast(error.message || "优化图生成失败，文字建议仍可使用");
+      }
     }
 
     function renderReviewList(element, values, fallback) {
@@ -4602,6 +4902,7 @@ ${listHtml}
       const closeSheet = event.target.closest("[data-close-sheet]");
       const replaceButton = event.target.closest("[data-replace]");
       const generateLookButton = event.target.closest("[data-generate-look]");
+      const generateOutfitImage = event.target.closest("[data-generate-outfit-image]");
       const scrollButton = event.target.closest("[data-scroll-target]");
       const chip = event.target.closest(".chip");
 
@@ -4695,6 +4996,12 @@ ${listHtml}
       if (generateLookButton) {
         event.preventDefault();
         generateRecommendationImage(generateLookButton.dataset.generateLook);
+        return;
+      }
+
+      if (generateOutfitImage) {
+        event.preventDefault();
+        generateOutfitRefinementImage();
         return;
       }
 

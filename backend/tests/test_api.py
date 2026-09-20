@@ -180,6 +180,8 @@ def test_refine_outfit_returns_three_plan_types() -> None:
             "/api/refine-outfit",
             json={
                 "image_id": uploaded["image_id"],
+                "occasion": "面试会议",
+                "change_intensity": "recommended",
                 "conversation_state": {
                     "locked_items": ["上衣"],
                     "rejected_items": ["高跟鞋"],
@@ -198,6 +200,30 @@ def test_refine_outfit_returns_three_plan_types() -> None:
         }
         assert all(plan["change_budget"] for plan in data["plans"])
         assert all("from" in plan["changes"][0] for plan in data["plans"])
+        assert data["occasion"] == "面试会议"
+        assert data["occasion_assessment"]
+        assert data["score"]["total"] == sum(
+            item["score"] for item in data["score"]["dimensions"]
+        )
+        assert len(data["score"]["dimensions"]) == 5
+        assert all(plan["after_image"] == plan["before_image"] for plan in data["plans"])
+        assert all(plan["image_status"] == "awaiting_generation" for plan in data["plans"])
+
+        image_response = client.post(
+            "/api/outfit-refinement-image",
+            json={
+                "session_id": data["session_id"],
+                "image_id": uploaded["image_id"],
+                "occasion": data["occasion"],
+                "plan": next(
+                    plan for plan in data["plans"] if plan["plan_type"] == "recommended"
+                ),
+                "visitor_id": "test-visitor",
+            },
+        )
+        assert image_response.status_code == 200
+        assert image_response.json()["image_status"] == "failed"
+        assert image_response.json()["plan_id"] == "outfit-recommended-001"
     finally:
         _cleanup_uploaded_file(uploaded["image_url"])
 

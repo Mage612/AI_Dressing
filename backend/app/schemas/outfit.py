@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class AnalyzeOutfitRequest(BaseModel):
@@ -39,8 +39,29 @@ class ConversationState(BaseModel):
 
 class RefineOutfitRequest(BaseModel):
     image_id: str
+    occasion: str = "日常休闲"
+    change_intensity: Literal["minimal", "recommended", "expressive"] = "recommended"
     conversation_state: ConversationState = Field(default_factory=ConversationState)
     free_text_constraints: Optional[str] = ""
+
+
+class OutfitScoreDimension(BaseModel):
+    key: Literal["color", "proportion", "personal_fit", "occasion_fit", "style_completion"]
+    label: str
+    score: int = Field(ge=0, le=20)
+    summary: str
+
+
+class OutfitScore(BaseModel):
+    total: int = Field(ge=0, le=100)
+    verdict: str
+    dimensions: List[OutfitScoreDimension] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def total_matches_dimensions(self) -> "OutfitScore":
+        if self.dimensions:
+            self.total = min(100, sum(item.score for item in self.dimensions))
+        return self
 
 
 class OutfitChange(BaseModel):
@@ -61,6 +82,7 @@ class RefinePlan(BaseModel):
     before_image: str
     after_image: str
     image_instruction: str = ""
+    image_status: Literal["awaiting_generation", "pending", "generated", "failed"] = "awaiting_generation"
     constraint_check: dict = Field(default_factory=dict)
 
 
@@ -69,11 +91,32 @@ class RefineOutfitResponse(BaseModel):
     image_id: str
     conversation_state: ConversationState
     overall_summary: str = ""
+    occasion: str = "日常休闲"
+    occasion_assessment: str = ""
+    score: OutfitScore
     strengths: List[str] = Field(default_factory=list)
     main_issues: List[str] = Field(default_factory=list)
     diagnosis_dimensions: List[DiagnosisDimension] = Field(default_factory=list)
     keep_items: List[str] = Field(default_factory=list)
     plans: List[RefinePlan] = Field(default_factory=list)
+
+
+class GenerateOutfitImageRequest(BaseModel):
+    session_id: str
+    image_id: str
+    occasion: str = "日常休闲"
+    plan: RefinePlan
+    visitor_id: Optional[str] = Field(default=None, max_length=100)
+
+
+class GenerateOutfitImageResponse(BaseModel):
+    plan_id: str
+    image_url: str = ""
+    image_status: Literal["pending", "generated", "failed"]
+    error: str = ""
+    job_id: str = ""
+    cached: bool = False
+    remaining_daily_generations: Optional[int] = None
 
 
 class ReviewOutfitRequest(BaseModel):

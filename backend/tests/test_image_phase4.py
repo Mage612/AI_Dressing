@@ -8,9 +8,12 @@ from app.schemas.item import (
     ItemRecommendation,
     RecommendationItem,
 )
+from app.schemas.outfit import GenerateOutfitImageRequest, RefinePlan
 from app.services.styling_service import (
     _build_item_image_prompt,
+    _build_outfit_refinement_image_prompt,
     _image_generation_cache_key,
+    _outfit_refinement_cache_key,
 )
 from app.services import image_generation_jobs
 
@@ -332,5 +335,63 @@ def test_image_cache_key_changes_when_image_prompt_changes(tmp_path) -> None:
 
     first_key = _image_generation_cache_key(request, reference_image, "prompt-v1")
     second_key = _image_generation_cache_key(request, reference_image, "prompt-v2")
+
+    assert first_key != second_key
+
+
+def test_outfit_refinement_prompt_preserves_person_and_only_applies_plan() -> None:
+    plan = RefinePlan(
+        plan_id="outfit-recommended-001",
+        plan_type="recommended",
+        title="推荐调整",
+        summary="只调整最关键的一处",
+        change_budget="替换一件",
+        changes=[
+            {
+                "target": "上衣版型",
+                "action": "调整",
+                "from": "宽松长上衣",
+                "to": "合身短上衣",
+                "reason": "露出腰线",
+            }
+        ],
+        before_image="/uploads/original.png",
+        after_image="/uploads/original.png",
+    )
+
+    prompt = _build_outfit_refinement_image_prompt(plan, "面试会议")
+
+    assert "smallest possible wardrobe changes" in prompt
+    assert "same person, face, hair, body proportions" in prompt
+    assert "Preserve every original garment that is not explicitly changed" in prompt
+    assert "上衣版型" in prompt
+    assert "面试会议" in prompt
+    assert "Do not add text" in prompt
+    assert "outfit breakdowns" in prompt
+    assert "Return only the clean edited fashion photograph" in prompt
+
+
+def test_outfit_refinement_cache_changes_with_prompt(tmp_path) -> None:
+    reference_image = tmp_path / "look.png"
+    reference_image.write_bytes(b"same-look")
+    plan = RefinePlan(
+        plan_id="outfit-recommended-001",
+        plan_type="recommended",
+        title="推荐调整",
+        summary="少量调整",
+        change_budget="替换一件",
+        changes=[],
+        before_image="/uploads/original.png",
+        after_image="/uploads/original.png",
+    )
+    request = GenerateOutfitImageRequest(
+        session_id="session-1",
+        image_id="image-1",
+        occasion="日常休闲",
+        plan=plan,
+    )
+
+    first_key = _outfit_refinement_cache_key(request, reference_image, "prompt-v1")
+    second_key = _outfit_refinement_cache_key(request, reference_image, "prompt-v2")
 
     assert first_key != second_key

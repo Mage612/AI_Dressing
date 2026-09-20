@@ -11,6 +11,8 @@ from app.schemas.item import (
 from app.schemas.outfit import (
     AnalyzeOutfitRequest,
     AnalyzeOutfitResponse,
+    GenerateOutfitImageRequest,
+    GenerateOutfitImageResponse,
     RefineOutfitRequest,
     RefineOutfitResponse,
     ReviewOutfitRequest,
@@ -124,6 +126,40 @@ def refine_outfit(request: RefineOutfitRequest) -> RefineOutfitResponse:
     except StylingServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/outfit-refinement-image", response_model=GenerateOutfitImageResponse)
+def generate_outfit_refinement_image(
+    request: GenerateOutfitImageRequest,
+) -> GenerateOutfitImageResponse:
+    try:
+        return styling_service.generate_outfit_refinement_image(request)
+    except (InvalidImageIdError, ImageNotFoundError) as exc:
+        _raise_api_error(exc)
+    except ImageGenerationLimitError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        ) from exc
+    except StylingServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/outfit-refinement-image/{job_id}",
+    response_model=GenerateOutfitImageResponse,
+)
+def get_outfit_refinement_image(job_id: str) -> GenerateOutfitImageResponse:
+    try:
+        return styling_service.get_outfit_refinement_image(job_id)
+    except StylingServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
 

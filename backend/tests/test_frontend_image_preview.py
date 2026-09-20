@@ -23,3 +23,17 @@ def test_only_recommended_plan_is_generated_automatically() -> None:
     assert 'find((plan) => plan.strategy === "recommended")' in html
     assert "generateRecommendationImage(recommended.plan_id, true)" in html
     assert 'data-generate-look="${escapeAttribute(recommendation.plan_id)}"' in html
+
+
+def test_outfit_refinement_has_context_score_and_on_demand_image_flow() -> None:
+    html = INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'id="outfit-occasion-group"' in html
+    assert 'id="outfit-intensity-group"' in html
+    assert 'id="outfit-score-total"' in html
+    assert 'id="outfit-score-dimensions"' in html
+    assert 'data-generate-outfit-image' in html
+    assert 'requestJson("/outfit-refinement-image"' in html
+    assert "function pollOutfitRefinementImage" in html
+    assert 'requestJson("/analyze-outfit"' not in html
+    assert "plan.after_image = imageUrl" in html

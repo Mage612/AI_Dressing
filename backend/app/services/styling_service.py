@@ -21,6 +21,10 @@ from app.schemas.item import (
 from app.schemas.outfit import (
     ConversationState,
     DiagnosisDimension,
+    GenerateOutfitImageRequest,
+    GenerateOutfitImageResponse,
+    OutfitScore,
+    OutfitScoreDimension,
     RefineOutfitRequest,
     RefineOutfitResponse,
     RefinePlan,
@@ -70,6 +74,8 @@ class DeepSeekItemOutput(BaseModel):
 
 class DeepSeekRefineOutput(BaseModel):
     overall_summary: str = ""
+    occasion_assessment: str = ""
+    score: OutfitScore
     strengths: list[str] = Field(default_factory=list)
     main_issues: list[str] = Field(default_factory=list)
     diagnosis_dimensions: list[DiagnosisDimension] = Field(default_factory=list)
@@ -183,8 +189,8 @@ class MockStylingService:
                     {"target": adjustable_target, "action": "调整", "from": recommended_from, "to": recommended_to, "reason": "现有上衣已经偏修身，也有腰线；这里主要增加层次和视觉重心，不把问题夸大。"},
                 ],
                 before_image=before_image,
-                after_image=REFERENCE_IMAGES["outfit_after"],
-                image_instruction="Phase 4 前仅使用占位图。",
+                after_image=before_image,
+                image_instruction="保留人物、背景和大部分原穿搭，只执行列出的推荐调整。",
             ),
             RefinePlan(
                 plan_id="outfit-minimal-001",
@@ -196,8 +202,8 @@ class MockStylingService:
                     {"target": adjustable_target, "action": minimal_action, "from": minimal_from, "to": minimal_to, "reason": "改动很小，但能让比例和完成度更清楚。"},
                 ],
                 before_image=before_image,
-                after_image=REFERENCE_IMAGES["safe"],
-                image_instruction="Phase 4 前仅使用占位图。",
+                after_image=before_image,
+                image_instruction="保留人物和原穿搭，只执行轻微调整。",
             ),
             RefinePlan(
                 plan_id="outfit-expressive-001",
@@ -209,8 +215,8 @@ class MockStylingService:
                     {"target": adjustable_target, "action": "替换风格", "from": minimal_from, "to": "更有线条感的版本", "reason": "能增加一点风格表达，同时不改变已锁定的部分。"},
                 ],
                 before_image=before_image,
-                after_image=REFERENCE_IMAGES["recommended"],
-                image_instruction="Phase 4 前仅使用占位图。",
+                after_image=before_image,
+                image_instruction="保留人物与背景，最多改变两处服装并增加一件配饰。",
             ),
         ]
         validate_refine_plans(plans, state=state)
@@ -220,6 +226,13 @@ class MockStylingService:
             image_id=request.image_id,
             conversation_state=state,
             overall_summary="这身已经比较协调：上衣偏修身，腰线也能看出来。主要可以优化的是层次感和视觉重心。",
+            occasion=request.occasion,
+            occasion_assessment=(
+                f"当前搭配用于{request.occasion}略显轻松，建议提高完整度与正式感。"
+                if _is_formal_occasion(request.occasion)
+                else f"当前搭配适合{request.occasion}，完成度不错，稍微强化层次会更得体。"
+            ),
+            score=_default_outfit_score(request.occasion),
             strengths=["上衣贴合度不错，腰线并不弱。", "黑色上衣和灰色长裙的颜色关系比较稳。"],
             main_issues=["整体层次略少。", "视觉重点可以再明确一点。"],
             diagnosis_dimensions=[
@@ -297,12 +310,16 @@ class DeepSeekStylingService:
         )
         for plan in output.plans:
             plan.before_image = plan.before_image or before_image
-            plan.after_image = plan.after_image or REFERENCE_IMAGES["outfit_after"]
+            plan.after_image = before_image
+            plan.image_status = "awaiting_generation"
         return RefineOutfitResponse(
             session_id=session_id,
             image_id=request.image_id,
             conversation_state=state,
             overall_summary=output.overall_summary,
+            occasion=request.occasion,
+            occasion_assessment=output.occasion_assessment,
+            score=output.score,
             strengths=output.strengths[:2],
             main_issues=output.main_issues[:2],
             diagnosis_dimensions=output.diagnosis_dimensions,
@@ -486,7 +503,7 @@ def _system_prompt(skill_yaml: str, knowledge_markdown: str) -> str:
         "Core policy:\n"
         "- User hard constraints beat aesthetics.\n"
         "- Keep fixed_item unchanged in every plan.\n"
-        "- Do not use unsupported body judgments, aesthetic scores, or absolute body rules.\n"
+        "- Do not use unsupported body judgments or absolute body rules. Outfit scores evaluate the styling, never the person's worth or body.\n"
         "- Prefer practical, wearable, low-change suggestions.\n"
         "- If the outfit is already good, phrase issues as light optimizations.\n"
         "- Keep all user-facing text in Simplified Chinese.\n"
@@ -523,6 +540,8 @@ def _outfit_user_prompt(
         "vision_observation": vision_json,
         "session_state": state,
         "current_user_request": {
+            "occasion": request.occasion,
+            "change_intensity": request.change_intensity,
             "free_text_constraints": request.free_text_constraints or "",
             "before_image": before_image,
         },
@@ -600,6 +619,49 @@ def _append_unique(values: list[str], value: str) -> None:
         values.append(value)
 
 
+def _is_formal_occasion(occasion: str) -> bool:
+    return any(term in occasion for term in ["面试", "会议", "婚礼", "宴会", "正式"])
+
+
+def _default_outfit_score(occasion: str = "日常休闲") -> OutfitScore:
+    occasion_score = 12 if _is_formal_occasion(occasion) else 16
+    occasion_summary = (
+        f"用于{occasion}时还需提高正式度。"
+        if _is_formal_occasion(occasion)
+        else f"适合{occasion}场景。"
+    )
+    dimensions = [
+        OutfitScoreDimension(key="color", label="色彩和谐", score=16, summary="基础色关系协调。"),
+        OutfitScoreDimension(key="proportion", label="版型比例", score=14, summary="腰线可见，层次还能更清楚。"),
+        OutfitScoreDimension(key="personal_fit", label="本人适配", score=15, summary="整体自然，不会压过本人气质。"),
+        OutfitScoreDimension(key="occasion_fit", label="场合得体", score=occasion_score, summary=occasion_summary),
+        OutfitScoreDimension(key="style_completion", label="风格完成度", score=13, summary="可增加一个克制的视觉重点。"),
+    ]
+    return OutfitScore(
+        total=sum(item.score for item in dimensions),
+        verdict="基础协调，做少量调整就会更完整。",
+        dimensions=dimensions,
+    )
+
+
+def _build_outfit_refinement_image_prompt(plan: RefinePlan, occasion: str) -> str:
+    changes = "; ".join(
+        f"Change only {change.target} from {change.from_} to {change.to}. {change.reason}"
+        for change in plan.changes
+    ) or "Make only a subtle styling adjustment while preserving the original outfit."
+    return (
+        "Edit the attached photograph with the smallest possible wardrobe changes. "
+        "This is an image-to-image fashion edit, not a new character or a redesign.\n"
+        "Preserve the exact same person, face, hair, body proportions, skin tone, pose, camera angle, crop, lighting, and background.\n"
+        "Preserve every original garment that is not explicitly changed. Keep original garment colors unless a listed change explicitly changes color.\n"
+        "Keep the result appropriate for " + occasion + ". Apply only these changes: " + changes + "\n"
+        "Show one realistic person in one continuous photographic scene, fully visible in the same framing as the reference.\n"
+        "Do not add text, captions, labels, score cards, arrows, color palettes, product panels, outfit breakdowns, icons, borders, collage, split screen, inset images, or watermarks.\n"
+        "Do not display garments or accessories separately. Do not change the person's identity, gender presentation, age presentation, or body shape.\n"
+        "Return only the clean edited fashion photograph."
+    )
+
+
 def _build_item_image_prompt(
     recommendation: ItemRecommendation,
     fixed_item: ClothingItem,
@@ -656,6 +718,73 @@ def _build_item_image_prompt(
         f"Dress the same model with these complementary pieces: {complementary_items}.\n"
         "Output only one finished clean e-commerce outfit photograph. The image must have no layout, no written explanation, and no elements outside the single photographic scene."
     )
+
+
+def generate_outfit_refinement_image(
+    request: GenerateOutfitImageRequest,
+) -> GenerateOutfitImageResponse:
+    if not settings.is_live_image_enabled():
+        return GenerateOutfitImageResponse(
+            plan_id=request.plan.plan_id,
+            image_url=request.plan.before_image,
+            image_status="failed",
+            error="AI_IMAGE_MODE is not live.",
+        )
+    reference_image_path = get_uploaded_image_path(request.image_id)
+    prompt = _build_outfit_refinement_image_prompt(request.plan, request.occasion)
+    cache_key = _outfit_refinement_cache_key(request, reference_image_path, prompt)
+    job = start_image_generation_job(
+        plan_id=request.plan.plan_id,
+        fallback_image_url=request.plan.before_image,
+        prompt=prompt,
+        task_type="outfit_refinement_image_generation",
+        prompt_version=settings.STYLING_PROMPT_VERSION,
+        session_id=request.session_id,
+        recommendation_id=request.plan.plan_id,
+        reference_image_path=reference_image_path,
+        cache_key=cache_key,
+        visitor_id=request.visitor_id or request.session_id,
+    )
+    return _outfit_image_job_response(job)
+
+
+def get_outfit_refinement_image(job_id: str) -> GenerateOutfitImageResponse:
+    job = get_image_generation_job(job_id)
+    if job is None:
+        raise StylingServiceError("Outfit image generation job was not found.")
+    return _outfit_image_job_response(job)
+
+
+def _outfit_image_job_response(job: Any) -> GenerateOutfitImageResponse:
+    return GenerateOutfitImageResponse(
+        plan_id=job.plan_id,
+        image_url=job.image_url,
+        image_status=job.status,
+        error=job.error,
+        job_id=job.job_id,
+        cached=job.cached,
+        remaining_daily_generations=job.remaining_daily_generations,
+    )
+
+
+def _outfit_refinement_cache_key(
+    request: GenerateOutfitImageRequest,
+    reference_image_path: Path,
+    prompt: str,
+) -> str:
+    payload = {
+        "workflow": "outfit-refinement-v1",
+        "model": settings.QWEN_IMAGE_MODEL,
+        "size": settings.QWEN_IMAGE_SIZE,
+        "occasion": request.occasion,
+        "plan": request.plan.model_dump(
+            exclude={"before_image", "after_image", "image_status", "constraint_check"}
+        ),
+        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+    }
+    digest = hashlib.sha256(reference_image_path.read_bytes())
+    digest.update(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8"))
+    return digest.hexdigest()
 
 
 def _print_validation_debug(
