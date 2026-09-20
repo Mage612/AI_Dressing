@@ -35,5 +35,7 @@ def test_outfit_refinement_has_context_score_and_on_demand_image_flow() -> None:
     assert 'data-generate-outfit-image' in html
     assert 'requestJson("/outfit-refinement-image"' in html
     assert "function pollOutfitRefinementImage" in html
-    assert 'requestJson("/analyze-outfit"' not in html
+    assert 'requestJson("/analyze-outfit"' in html
+    assert "vision_observation: diagnosis" in html
+    assert "refinement = refinement || {};" in html
     assert "plan.after_image = imageUrl" in html

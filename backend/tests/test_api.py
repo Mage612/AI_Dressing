@@ -176,6 +176,10 @@ def test_refine_outfit_returns_three_plan_types() -> None:
     uploaded = _upload_test_image()
 
     try:
+        diagnosis = client.post(
+            "/api/analyze-outfit",
+            json={"image_id": uploaded["image_id"]},
+        ).json()
         response = client.post(
             "/api/refine-outfit",
             json={
@@ -187,6 +191,7 @@ def test_refine_outfit_returns_three_plan_types() -> None:
                     "rejected_items": ["高跟鞋"],
                     "user_notes": "想更显高",
                 },
+                "vision_observation": diagnosis,
             },
         )
 

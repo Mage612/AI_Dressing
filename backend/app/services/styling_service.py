@@ -296,7 +296,9 @@ class DeepSeekStylingService:
     def refine_outfit(self, request: RefineOutfitRequest) -> RefineOutfitResponse:
         session_id = str(uuid4())
         before_image = get_uploaded_image_url_path(request.image_id)
-        observation = analyze_outfit(request.image_id)
+        # The public runtime has a short request timeout. Accept the result from
+        # the dedicated vision step so vision and styling are not run serially.
+        observation = request.vision_observation or analyze_outfit(request.image_id)
         state = _update_session_state(request.conversation_state, request.free_text_constraints or "")
         context = load_styling_context()
         output = self._generate_with_constraint_retry(

@@ -43,6 +43,7 @@ class RefineOutfitRequest(BaseModel):
     change_intensity: Literal["minimal", "recommended", "expressive"] = "recommended"
     conversation_state: ConversationState = Field(default_factory=ConversationState)
     free_text_constraints: Optional[str] = ""
+    vision_observation: Optional[AnalyzeOutfitResponse] = None
 
 
 class OutfitScoreDimension(BaseModel):

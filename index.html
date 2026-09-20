@@ -4156,8 +4156,10 @@
     }
 
     function renderOutfitDiagnosis(diagnosis, refinement) {
+      const hasRefinement = Boolean(refinement);
+      refinement = refinement || {};
       currentOutfitSession.diagnosis = diagnosis;
-      currentOutfitSession.refinement = refinement;
+      currentOutfitSession.refinement = hasRefinement ? refinement : null;
 
       const plans = refinement.plans || [];
       const mainPlan = plans.find((plan) => plan.plan_type === currentOutfitSession.changeIntensity)
@@ -4167,7 +4169,7 @@
 
       setImageSource(diagnosisPhotoImg, currentOutfitSession.imageUrl);
       if (diagnosisSummary) diagnosisSummary.textContent = refinement.overall_summary || diagnosis.overall_summary;
-      renderOutfitScore(refinement.score);
+      if (refinement.score) renderOutfitScore(refinement.score);
       if (occasionAssessment) occasionAssessment.textContent = refinement.occasion_assessment || `按${refinement.occasion || currentOutfitSession.occasion}场合评估。`;
       renderDiagnosisRows(refinement.diagnosis_dimensions || diagnosis.diagnosis_dimensions);
       if (coreProblemText) {
@@ -4231,6 +4233,15 @@
         setContainedBackground(baBeforeImage, uploaded.image_url);
         showToast("AI 正在诊断这身穿搭...");
 
+        const diagnosis = await requestJson("/analyze-outfit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image_id: uploaded.image_id })
+        }, 60000);
+
+        renderOutfitDiagnosis(diagnosis, null);
+        showToast("诊断完成，正在生成修改方案...");
+
         const refinement = await requestJson("/refine-outfit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -4244,7 +4255,8 @@
               occasion_constraints: [currentOutfitSession.occasion],
               rejected_items: [],
               user_notes: currentOutfitSession.freeTextConstraints
-            }
+            },
+            vision_observation: diagnosis
           })
         }, 90000);
 
@@ -4253,7 +4265,7 @@
       } catch (error) {
         showToast(error.message || "诊断失败，请稍后再试");
         if (diagnosisSummary) {
-          diagnosisSummary.textContent = "诊断失败，请确认后端服务已启动，或换一张 jpg、png、webp 图片再试。";
+          diagnosisSummary.textContent = `诊断失败：${error.message || "服务暂时不可用，请稍后重试。"}`;
         }
         if (coreProblemText) {
           coreProblemText.textContent = "暂时没有拿到 AI 诊断结果。";
