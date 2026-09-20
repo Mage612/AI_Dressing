@@ -38,6 +38,8 @@ def test_outfit_refinement_has_context_score_and_on_demand_image_flow() -> None:
     assert 'requestJson("/analyze-outfit-job"' in html
     assert 'requestJson("/refine-outfit-job"' in html
     assert "function waitForOutfitJob" in html
+    assert "consecutiveErrors >= 8" in html
+    assert "服务暂时繁忙（HTTP ${response.status}）" in html
     assert "vision_observation: diagnosis" in html
     assert "refinement = refinement || {};" in html
     assert "plan.after_image = imageUrl" in html

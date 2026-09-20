@@ -3579,21 +3579,34 @@
           signal: controller.signal
         });
 
+        const responseText = await response.text();
         let data;
         try {
-          data = await response.json();
+          data = responseText ? JSON.parse(responseText) : null;
         } catch (error) {
-          throw new Error("后端返回的不是有效 JSON");
+          const responseError = new Error(
+            response.ok
+              ? "服务返回异常，请稍后重试"
+              : `服务暂时繁忙（HTTP ${response.status}）`
+          );
+          responseError.status = response.status;
+          responseError.transient = response.status >= 500;
+          throw responseError;
         }
 
         if (!response.ok) {
-          throw new Error(formatApiError(data));
+          const responseError = new Error(formatApiError(data));
+          responseError.status = response.status;
+          responseError.transient = response.status >= 500;
+          throw responseError;
         }
 
         return data;
       } catch (error) {
         if (error.name === "AbortError") {
-          throw new Error("请求超时，请确认后端服务是否正常");
+          const timeoutError = new Error("请求超时，正在尝试重新连接");
+          timeoutError.transient = true;
+          throw timeoutError;
         }
         throw error;
       } finally {
@@ -4208,15 +4221,25 @@
     }
 
     async function waitForOutfitJob(path, jobId) {
+      let consecutiveErrors = 0;
+      let lastError = null;
       for (let attempt = 0; attempt < 90; attempt += 1) {
-        const job = await requestJson(`${path}/${jobId}`, {}, 15000);
-        if (job.status === "completed" && job.result) return job.result;
-        if (job.status === "failed") {
-          throw new Error(job.error || "AI 处理失败，请稍后重试");
+        try {
+          const job = await requestJson(`${path}/${jobId}`, {}, 15000);
+          consecutiveErrors = 0;
+          if (job.status === "completed" && job.result) return job.result;
+          if (job.status === "failed") {
+            throw new Error(job.error || "AI 处理失败，请稍后重试");
+          }
+        } catch (error) {
+          if (!error.transient) throw error;
+          lastError = error;
+          consecutiveErrors += 1;
+          if (consecutiveErrors >= 8) throw error;
         }
         await new Promise((resolve) => window.setTimeout(resolve, 2000));
       }
-      throw new Error("AI 处理时间较长，请稍后重试");
+      throw lastError || new Error("AI 处理时间较长，请稍后重试");
     }
 
     async function uploadAndAnalyzeOutfit(file) {
