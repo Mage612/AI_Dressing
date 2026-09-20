@@ -40,6 +40,8 @@ def test_outfit_refinement_has_context_score_and_on_demand_image_flow() -> None:
     assert "function waitForOutfitJob" in html
     assert "consecutiveErrors >= 8" in html
     assert "服务暂时繁忙（HTTP ${response.status}）" in html
+    assert "await generateOutfitRefinementImage();" in html
+    assert "修改建议已完成，正在生成右侧优化图" in html
     assert "vision_observation: diagnosis" in html
     assert "refinement = refinement || {};" in html
     assert "plan.after_image = imageUrl" in html

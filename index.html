@@ -4298,7 +4298,8 @@
         const refinement = await waitForOutfitJob("/refine-outfit-job", refinementJob.job_id);
 
         renderOutfitDiagnosis(refinement, refinement);
-        showToast("AI 已生成修改建议");
+        showToast("修改建议已完成，正在生成右侧优化图...");
+        await generateOutfitRefinementImage();
       } catch (error) {
         showToast(error.message || "诊断失败，请稍后再试");
         if (diagnosisSummary) {
