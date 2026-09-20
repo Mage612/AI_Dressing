@@ -233,6 +233,25 @@ def test_refine_outfit_returns_three_plan_types() -> None:
         _cleanup_uploaded_file(uploaded["image_url"])
 
 
+def test_refine_outfit_request_accepts_existing_vision_observation() -> None:
+    from app.schemas.outfit import RefineOutfitRequest
+
+    request = RefineOutfitRequest(
+        image_id="11111111-1111-4111-8111-111111111111",
+        vision_observation={
+            "image_id": "11111111-1111-4111-8111-111111111111",
+            "overall_summary": "整体简洁。",
+            "strengths": ["配色统一。"],
+            "main_issues": ["层次稍少。"],
+            "diagnosis_dimensions": [],
+            "keep_items": ["上衣"],
+        },
+    )
+
+    assert request.vision_observation is not None
+    assert request.vision_observation.overall_summary == "整体简洁。"
+
+
 def test_review_outfit_returns_comparison_report() -> None:
     original = _upload_test_image()
     reviewed = _upload_test_image()

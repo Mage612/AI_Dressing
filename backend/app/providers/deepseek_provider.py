@@ -116,6 +116,7 @@ class DeepSeekProvider:
         error_type: str | None = None
 
         try:
+            max_tokens = min(settings.MODEL_MAX_TOKENS, 2200) if task_type == "refine_outfit" else settings.MODEL_MAX_TOKENS
             response = httpx.post(
                 f"{self.base_url}/chat/completions",
                 headers={
@@ -125,7 +126,7 @@ class DeepSeekProvider:
                 json={
                     "model": self.model,
                     "response_format": {"type": "json_object"},
-                    "max_tokens": settings.MODEL_MAX_TOKENS,
+                    "max_tokens": max_tokens,
                     "temperature": 0.4,
                     "messages": [
                         {"role": "system", "content": system_prompt},
